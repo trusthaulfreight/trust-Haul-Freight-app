@@ -1,0 +1,129 @@
+{
+  "name": "DriverProfile",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Reference to the User entity"
+    },
+    "company_name": {
+      "type": "string"
+    },
+    "mc_number": {
+      "type": "string",
+      "description": "Motor Carrier number"
+    },
+    "dot_number": {
+      "type": "string",
+      "description": "DOT number"
+    },
+    "cdl_number": {
+      "type": "string",
+      "description": "CDL license number"
+    },
+    "cdl_state": {
+      "type": "string"
+    },
+    "truck_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Types of trucks: flatbed, dry_van, reefer, box_truck, step_deck, hotshot, tanker, car_hauler"
+    },
+    "years_experience": {
+      "type": "number"
+    },
+    "insurance_url": {
+      "type": "string",
+      "description": "Uploaded insurance document"
+    },
+    "cdl_url": {
+      "type": "string",
+      "description": "Uploaded CDL document"
+    },
+    "profile_photo_url": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip_code": {
+      "type": "string"
+    },
+    "latitude": {
+      "type": "number"
+    },
+    "longitude": {
+      "type": "number"
+    },
+    "service_radius_miles": {
+      "type": "number",
+      "default": 500
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "verified",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "background_check_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "pending",
+        "passed",
+        "failed"
+      ],
+      "default": "not_started"
+    },
+    "subscription_plan": {
+      "type": "string",
+      "enum": [
+        "none",
+        "basic",
+        "premium"
+      ],
+      "default": "none"
+    },
+    "subscription_expires": {
+      "type": "string",
+      "format": "date"
+    },
+    "posts_remaining": {
+      "type": "number",
+      "default": 0
+    },
+    "average_rating": {
+      "type": "number",
+      "default": 0
+    },
+    "total_reviews": {
+      "type": "number",
+      "default": 0
+    },
+    "total_loads_completed": {
+      "type": "number",
+      "default": 0
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_id"
+  ]
+}

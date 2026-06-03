@@ -1,0 +1,44 @@
+{
+  "name": "Review",
+  "type": "object",
+  "properties": {
+    "load_id": {
+      "type": "string"
+    },
+    "reviewer_id": {
+      "type": "string"
+    },
+    "reviewee_id": {
+      "type": "string"
+    },
+    "reviewer_type": {
+      "type": "string",
+      "enum": [
+        "driver",
+        "shipper"
+      ]
+    },
+    "rating": {
+      "type": "number",
+      "description": "1-5 stars"
+    },
+    "comment": {
+      "type": "string"
+    },
+    "professionalism": {
+      "type": "number"
+    },
+    "communication": {
+      "type": "number"
+    },
+    "timeliness": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "load_id",
+    "reviewer_id",
+    "reviewee_id",
+    "rating"
+  ]
+}
