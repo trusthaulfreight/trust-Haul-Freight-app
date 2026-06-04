@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -7,8 +7,16 @@ import PullToRefresh from '@/components/PullToRefresh';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Package, Truck, MessageSquare, Star, ArrowRight, MapPin, Clock, DollarSign, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Package, Truck, Star, ArrowRight, MapPin, Clock, DollarSign, ShieldCheck, AlertCircle, TrendingUp, Zap, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
+
+const statusColors = {
+  posted: 'bg-blue-500/10 text-blue-600 border-blue-200',
+  assigned: 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
+  in_transit: 'bg-orange-500/10 text-orange-600 border-orange-200',
+  delivered: 'bg-green-500/10 text-green-700 border-green-200',
+  cancelled: 'bg-red-500/10 text-red-600 border-red-200',
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -24,13 +32,12 @@ export default function Dashboard() {
 
   const { data: recentLoads = [] } = useQuery({
     queryKey: ['recent-loads'],
-    queryFn: () => base44.entities.Load.filter({ status: 'posted' }, '-created_date', 5),
+    queryFn: () => base44.entities.Load.filter({ status: 'posted' }, '-created_date', 8),
   });
 
   const { data: profile } = useQuery({
     queryKey: ['my-profile'],
     queryFn: async () => {
-      if (!user.profile_id) return null;
       if (isDriver) {
         const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
         return profiles[0];
@@ -41,24 +48,23 @@ export default function Dashboard() {
     },
   });
 
+  // Real-time load updates via subscription
+  useEffect(() => {
+    const unsubscribeLoads = base44.entities.Load.subscribe((event) => {
+      queryClient.invalidateQueries({ queryKey: ['my-loads'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-loads'] });
+    });
+    return () => unsubscribeLoads();
+  }, [queryClient]);
+
   if (!user?.onboarding_complete) {
     return <Navigate to="/onboarding" replace />;
   }
 
   const activeLoads = myLoads.filter(l => ['assigned', 'in_transit'].includes(l.status));
   const completedLoads = myLoads.filter(l => l.status === 'delivered');
-
-  const stats = isDriver ? [
-    { label: 'Active Loads', value: activeLoads.length, icon: Truck, color: 'text-blue-500 bg-blue-500/10' },
-    { label: 'Completed', value: completedLoads.length, icon: Package, color: 'text-green-500 bg-green-500/10' },
-    { label: 'Rating', value: profile?.average_rating?.toFixed(1) || '0.0', icon: Star, color: 'text-secondary bg-secondary/10' },
-    { label: 'Verified', value: profile?.verification_status === 'verified' ? 'Yes' : 'Pending', icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10' },
-  ] : [
-    { label: 'Active Loads', value: activeLoads.length, icon: Truck, color: 'text-blue-500 bg-blue-500/10' },
-    { label: 'Total Posted', value: myLoads.length, icon: Package, color: 'text-green-500 bg-green-500/10' },
-    { label: 'Rating', value: profile?.average_rating?.toFixed(1) || '0.0', icon: Star, color: 'text-secondary bg-secondary/10' },
-    { label: 'Delivered', value: completedLoads.length, icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10' },
-  ];
+  const totalEarnings = completedLoads.reduce((s, l) => s + (l.budget || 0), 0);
+  const inTransitLoads = myLoads.filter(l => l.status === 'in_transit');
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['my-loads'] });
@@ -66,80 +72,310 @@ export default function Dashboard() {
     await queryClient.invalidateQueries({ queryKey: ['my-profile'] });
   };
 
+  if (isDriver) {
+    return (
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="space-y-6">
+        {/* Driver header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-heading">Driver Dashboard</h1>
+            <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.full_name?.split(' ')[0] || 'Driver'}!</p>
+          </div>
+          <Link to="/loads">
+            <Button className="bg-secondary hover:bg-secondary/90 text-white">
+              Find Loads <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+
+        {/* Subscription alert */}
+        {profile?.subscription_plan === 'none' && (
+          <Card className="border-secondary/40 bg-secondary/5">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-secondary flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">Subscribe to start bidding on loads</p>
+                  <p className="text-xs text-muted-foreground">Plans start at just $69.99/month</p>
+                </div>
+              </div>
+              <Link to="/subscription">
+                <Button size="sm" className="bg-secondary hover:bg-secondary/90 text-white whitespace-nowrap">Subscribe Now</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Driver stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <Truck className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{inTransitLoads.length}</p>
+                <p className="text-xs text-muted-foreground">In Transit</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{completedLoads.length}</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-5 w-5 text-secondary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">${totalEarnings.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Total Earned</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <Star className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{profile?.average_rating?.toFixed(1) || '—'}</p>
+                <p className="text-xs text-muted-foreground">Rating ({profile?.total_reviews || 0} reviews)</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Verification status */}
+        {profile?.verification_status !== 'verified' && (
+          <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-500/5 dark:border-yellow-500/20">
+            <CardContent className="p-4 flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-400">Profile Verification Pending</p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-500">Complete your profile to get verified and build shipper trust</p>
+              </div>
+              <Link to="/profile">
+                <Button size="sm" variant="outline" className="border-yellow-300 text-yellow-700 hover:bg-yellow-100 whitespace-nowrap">Complete Profile</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Active / In-Transit loads */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-secondary" /> My Active Loads
+                </CardTitle>
+                <Link to="/my-loads" className="text-xs text-secondary hover:underline">View All</Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {activeLoads.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Truck className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No active loads right now</p>
+                  <Link to="/loads" className="text-xs text-secondary hover:underline mt-1 inline-block">Browse the load board →</Link>
+                </div>
+              ) : (
+                activeLoads.slice(0, 5).map(load => (
+                  <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-sm font-semibold leading-tight">{load.title}</h4>
+                      <Badge className={`text-xs capitalize shrink-0 ${statusColors[load.status]}`}>{load.status?.replace('_', ' ')}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span>{load.pickup_city}, {load.pickup_state}</span>
+                      <ArrowRight className="h-3 w-3 shrink-0" />
+                      <span>{load.delivery_city}, {load.delivery_state}</span>
+                    </div>
+                    {load.budget && <p className="text-xs font-semibold text-green-600 mt-1">${load.budget.toLocaleString()}</p>}
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* New available loads */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-secondary" /> New Available Loads
+                </CardTitle>
+                <Link to="/loads" className="text-xs text-secondary hover:underline">View All</Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {recentLoads.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No loads posted yet</p>
+              ) : (
+                recentLoads.map(load => (
+                  <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold truncate">{load.title}</h4>
+                          {load.is_urgent && <Badge className="bg-destructive/10 text-destructive text-xs shrink-0">Urgent</Badge>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span>{load.pickup_city}, {load.pickup_state}</span>
+                          <ArrowRight className="h-3 w-3 shrink-0" />
+                          <span>{load.delivery_city}, {load.delivery_state}</span>
+                        </div>
+                        {load.pickup_date && (
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />{format(new Date(load.pickup_date), 'MMM d, yyyy')}
+                          </p>
+                        )}
+                      </div>
+                      {load.budget && (
+                        <div className="text-right shrink-0">
+                          <p className="text-base font-bold text-green-600">${load.budget.toLocaleString()}</p>
+                          {load.distance_miles && <p className="text-xs text-muted-foreground">${(load.budget / load.distance_miles).toFixed(2)}/mi</p>}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick links */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Load Board', path: '/loads', icon: Package },
+            { label: 'My Loads', path: '/my-loads', icon: Truck },
+            { label: 'Calendar', path: '/calendar', icon: Clock },
+            { label: 'Report', path: '/report', icon: TrendingUp },
+          ].map(link => (
+            <Link key={link.path} to={link.path}>
+              <Card className="hover:border-secondary/40 transition-colors cursor-pointer">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <link.icon className="h-5 w-5 text-secondary" />
+                  <span className="text-sm font-medium">{link.label}</span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+      </PullToRefresh>
+    );
+  }
+
+  // --- SHIPPER DASHBOARD ---
+  const postedLoads = myLoads.filter(l => l.status === 'posted');
+  const totalSpent = completedLoads.reduce((s, l) => s + (l.budget || 0), 0);
+
   return (
     <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-heading">Welcome back, {user?.full_name?.split(' ')[0] || 'there'}!</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {isDriver ? 'Find loads and grow your business' : 'Manage your shipments efficiently'}
-          </p>
+          <h1 className="text-2xl font-bold font-heading">Shipper Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.full_name?.split(' ')[0] || 'there'}!</p>
         </div>
-        <Link to={isDriver ? '/loads' : '/post-load'}>
+        <Link to="/post-load">
           <Button className="bg-secondary hover:bg-secondary/90 text-white">
-            {isDriver ? 'Browse Loads' : 'Post a Load'} <ArrowRight className="ml-2 h-4 w-4" />
+            Post a Load <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>
       </div>
 
-      {/* Stats */}
+      {/* Shipper stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <Card key={i}>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${stat.color}`}>
-                <stat.icon className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Subscription alert for drivers */}
-      {isDriver && profile?.subscription_plan === 'none' && (
-        <Card className="border-secondary/30 bg-secondary/5">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-secondary" />
-              <div>
-                <p className="text-sm font-semibold">Subscribe to start bidding on loads</p>
-                <p className="text-xs text-muted-foreground">Plans start at just $69.99/month</p>
-              </div>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+              <Package className="h-5 w-5 text-blue-500" />
             </div>
-            <Link to="/subscription">
-              <Button size="sm" className="bg-secondary hover:bg-secondary/90 text-white">Subscribe Now</Button>
-            </Link>
+            <div>
+              <p className="text-2xl font-bold">{postedLoads.length}</p>
+              <p className="text-xs text-muted-foreground">Open Loads</p>
+            </div>
           </CardContent>
         </Card>
-      )}
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+              <Truck className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{activeLoads.length}</p>
+              <p className="text-xs text-muted-foreground">In Transit</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{completedLoads.length}</p>
+              <p className="text-xs text-muted-foreground">Delivered</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="h-5 w-5 text-secondary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">${totalSpent.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Total Spent</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Active Loads */}
+        {/* Active loads */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Truck className="h-5 w-5 text-secondary" />
-              Active Loads
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Truck className="h-4 w-4 text-secondary" /> Active Shipments
+              </CardTitle>
+              <Link to="/my-loads" className="text-xs text-secondary hover:underline">View All</Link>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {activeLoads.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No active loads right now</p>
+              <div className="py-8 text-center">
+                <Truck className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No active shipments</p>
+                <Link to="/post-load" className="text-xs text-secondary hover:underline mt-1 inline-block">Post a load →</Link>
+              </div>
             ) : (
-              activeLoads.slice(0, 4).map(load => (
+              activeLoads.slice(0, 5).map(load => (
                 <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <h4 className="text-sm font-semibold">{load.title}</h4>
-                    <Badge variant="outline" className="capitalize text-xs">{load.status?.replace('_', ' ')}</Badge>
+                    <Badge className={`text-xs capitalize shrink-0 ${statusColors[load.status]}`}>{load.status?.replace('_', ' ')}</Badge>
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{load.pickup_city}, {load.pickup_state}</span>
-                    <span>→</span>
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span>{load.pickup_city}, {load.pickup_state}</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
                     <span>{load.delivery_city}, {load.delivery_state}</span>
                   </div>
                 </Link>
@@ -148,34 +384,32 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent loads or browse */}
+        {/* Recent loads */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="h-5 w-5 text-secondary" />
-                {isDriver ? 'Available Loads' : 'Your Recent Loads'}
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4 text-secondary" /> Recent Loads
               </CardTitle>
-              <Link to={isDriver ? '/loads' : '/my-loads'} className="text-xs text-secondary hover:underline">View All</Link>
+              <Link to="/my-loads" className="text-xs text-secondary hover:underline">View All</Link>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {(isDriver ? recentLoads : myLoads).slice(0, 4).map(load => (
+          <CardContent className="space-y-2">
+            {myLoads.slice(0, 5).map(load => (
               <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <h4 className="text-sm font-semibold">{load.title}</h4>
-                  {load.budget && <span className="text-sm font-bold text-green-600">${load.budget}</span>}
+                  <span className="text-sm font-bold text-green-600 shrink-0">{load.budget ? `$${load.budget.toLocaleString()}` : ''}</span>
                 </div>
-                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{load.pickup_city}, {load.pickup_state}</span>
-                  <span>→</span>
+                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                  <span>{load.pickup_city}, {load.pickup_state}</span>
+                  <ArrowRight className="h-3 w-3" />
                   <span>{load.delivery_city}, {load.delivery_state}</span>
-                  {load.pickup_date && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(new Date(load.pickup_date), 'MMM d')}</span>}
                 </div>
               </Link>
             ))}
-            {(isDriver ? recentLoads : myLoads).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">No loads yet</p>
+            {myLoads.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">No loads posted yet</p>
             )}
           </CardContent>
         </Card>
