@@ -1,19 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Zap, Crown, ShieldCheck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useToast } from "@/components/ui/use-toast";
 
 const plans = [
   {
     id: 'basic',
     name: 'Starter',
-    price: 69.99,
+    price: 49,
     icon: Zap,
     features: [
       'Up to 10 load bids per month',
@@ -28,7 +29,7 @@ const plans = [
   {
     id: 'premium',
     name: 'Pro Hauler',
-    price: 149.99,
+    price: 99,
     icon: Crown,
     popular: true,
     features: [
@@ -47,7 +48,18 @@ const plans = [
 
 export default function Subscription() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      toast({ title: '🎉 Subscription activated!', description: 'Welcome to TrustHaul. Your plan is now active.' });
+      window.history.replaceState({}, '', '/subscription');
+    } else if (params.get('cancelled') === 'true') {
+      toast({ title: 'Checkout cancelled', description: 'No charge was made.', variant: 'destructive' });
+      window.history.replaceState({}, '', '/subscription');
+    }
+  }, []);
 
   const { data: profile } = useQuery({
     queryKey: ['driver-profile-sub'],
@@ -59,17 +71,20 @@ export default function Subscription() {
 
   const subscribeMutation = useMutation({
     mutationFn: async (planId) => {
-      if (!profile) return;
-      const plan = plans.find(p => p.id === planId);
-      const expiresDate = new Date();
-      expiresDate.setMonth(expiresDate.getMonth() + 1);
-      await base44.entities.DriverProfile.update(profile.id, {
-        subscription_plan: planId,
-        subscription_expires: expiresDate.toISOString().split('T')[0],
-        posts_remaining: planId === 'basic' ? 10 : 999,
+      // Block checkout inside iframe (preview mode)
+      if (window.self !== window.top) {
+        alert('Checkout only works from the published app, not the preview.');
+        return;
+      }
+      const response = await base44.functions.invoke('createCheckoutSession', {
+        plan: planId,
+        successUrl: `${window.location.origin}/subscription?success=true`,
+        cancelUrl: `${window.location.origin}/subscription?cancelled=true`,
       });
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['driver-profile-sub'] }),
   });
 
   const currentPlan = profile?.subscription_plan || 'none';
