@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import PullToRefresh from '@/components/PullToRefresh';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { format } from 'date-fns';
 const TRUCK_TYPES = ['any', 'flatbed', 'dry_van', 'reefer', 'box_truck', 'step_deck', 'hotshot', 'tanker', 'car_hauler'];
 
 export default function LoadBoard() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [truckFilter, setTruckFilter] = useState('any');
   const [stateFilter, setStateFilter] = useState('any');
@@ -47,7 +49,12 @@ export default function LoadBoard() {
       return new Date(b.created_date) - new Date(a.created_date); // newest
     });
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['loads-board'] });
+  };
+
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-heading">Load Board</h1>
@@ -176,5 +183,6 @@ export default function LoadBoard() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

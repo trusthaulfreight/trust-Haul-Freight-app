@@ -93,6 +93,24 @@
   }
 }
 
+/* Mobile WebView: disable overscroll bounce */
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Native feel: disable text selection on interactive elements */
+button, a, [role="button"], nav, svg {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Minimum 44px touch targets on mobile */
+@media (max-width: 1024px) {
+  button, input, select, textarea, [role="button"] {
+    min-height: 44px;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

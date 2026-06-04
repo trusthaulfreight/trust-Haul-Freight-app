@@ -81,7 +81,7 @@ export default function DashboardLayout() {
         </div>
 
         {/* Mobile bottom nav */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="flex justify-around py-2">
             {sideLinks.slice(0, 5).map(link => {
               const Icon = link.icon;

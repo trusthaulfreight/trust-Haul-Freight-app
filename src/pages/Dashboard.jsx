@@ -1,8 +1,9 @@
 import React from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
+import PullToRefresh from '@/components/PullToRefresh';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { format } from 'date-fns';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const isDriver = user?.account_type === 'driver';
 
   const { data: myLoads = [] } = useQuery({
@@ -58,7 +60,14 @@ export default function Dashboard() {
     { label: 'Delivered', value: completedLoads.length, icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10' },
   ];
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['my-loads'] });
+    await queryClient.invalidateQueries({ queryKey: ['recent-loads'] });
+    await queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+  };
+
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -172,5 +181,6 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+    </PullToRefresh>
   );
 }

@@ -9,7 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, Star, Truck, Building2, Save, Loader2, Upload } from 'lucide-react';
+import { ShieldCheck, Star, Truck, Building2, Save, Loader2, Upload, Trash2 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -17,6 +21,23 @@ export default function Profile() {
   const isDriver = user?.account_type === 'driver';
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      if (isDriver) {
+        const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
+        if (profiles[0]) await base44.entities.DriverProfile.delete(profiles[0].id);
+      } else {
+        const profiles = await base44.entities.ShipperProfile.filter({ user_id: user.id });
+        if (profiles[0]) await base44.entities.ShipperProfile.delete(profiles[0].id);
+      }
+      base44.auth.logout('/');
+    } catch (e) {
+      setDeleting(false);
+    }
+  };
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile'],
@@ -160,6 +181,42 @@ export default function Profile() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+      {/* Delete Account */}
+      <Card className="border-destructive/30">
+        <CardHeader><CardTitle className="text-lg text-destructive">Danger Zone</CardTitle></CardHeader>
+        <CardContent className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Delete Account</p>
+            <p className="text-xs text-muted-foreground">Permanently delete your account and all data. This cannot be undone.</p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" className="shrink-0">
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete your profile and log you out. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Yes, Delete My Account
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
