@@ -31,6 +31,9 @@ import Messages from '@/pages/Messages';
 import Profile from '@/pages/Profile';
 import Reviews from '@/pages/Reviews';
 import Subscription from '@/pages/Subscription';
+import LoadCalendar from '@/pages/LoadCalendar';
+import ShipmentReport from '@/pages/ShipmentReport';
+import BulkLoads from '@/pages/BulkLoads';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -80,6 +83,9 @@ const AuthenticatedApp = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/reviews" element={<Reviews />} />
           <Route path="/subscription" element={<Subscription />} />
+          <Route path="/calendar" element={<LoadCalendar />} />
+          <Route path="/report" element={<ShipmentReport />} />
+          <Route path="/bulk-loads" element={<BulkLoads />} />
         </Route>
       </Route>
 

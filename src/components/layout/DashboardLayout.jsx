@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import Navbar from './Navbar';
-import { LayoutDashboard, Package, MessageSquare, User, Star, CreditCard, MapPin, Truck, Building2 } from 'lucide-react';
+import { LayoutDashboard, Package, MessageSquare, User, Star, CreditCard, MapPin, Truck, Building2, Calendar, FileText, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout() {
@@ -16,12 +16,18 @@ export default function DashboardLayout() {
     { label: 'My Loads', path: '/my-loads', icon: Truck },
     { label: 'Messages', path: '/messages', icon: MessageSquare },
     { label: 'Reviews', path: '/reviews', icon: Star },
+    { label: 'Calendar', path: '/calendar', icon: Calendar },
+    { label: 'Report', path: '/report', icon: FileText },
+    { label: 'Bulk Actions', path: '/bulk-loads', icon: CheckSquare },
     { label: 'Profile', path: '/profile', icon: User },
     { label: 'Subscription', path: '/subscription', icon: CreditCard },
   ] : [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Post a Load', path: '/post-load', icon: Package },
     { label: 'My Loads', path: '/my-loads', icon: Truck },
+    { label: 'Calendar', path: '/calendar', icon: Calendar },
+    { label: 'Report', path: '/report', icon: FileText },
+    { label: 'Bulk Actions', path: '/bulk-loads', icon: CheckSquare },
     { label: 'Messages', path: '/messages', icon: MessageSquare },
     { label: 'Reviews', path: '/reviews', icon: Star },
     { label: 'Profile', path: '/profile', icon: User },
