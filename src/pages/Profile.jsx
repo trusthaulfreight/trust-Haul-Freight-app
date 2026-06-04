@@ -56,14 +56,24 @@ export default function Profile() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (isDriver) {
-        await base44.entities.DriverProfile.update(profile.id, form);
+        return base44.entities.DriverProfile.update(profile.id, form);
       } else {
-        await base44.entities.ShipperProfile.update(profile.id, form);
+        return base44.entities.ShipperProfile.update(profile.id, form);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['profile'] });
+      const previous = queryClient.getQueryData(['profile']);
+      queryClient.setQueryData(['profile'], (old) => old ? { ...old, ...form } : old);
       setEditing(false);
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      queryClient.setQueryData(['profile'], ctx.previous);
+      setEditing(true);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 

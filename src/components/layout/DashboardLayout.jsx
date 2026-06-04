@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import Navbar from './Navbar';
-import { LayoutDashboard, Package, MessageSquare, User, Star, CreditCard, MapPin, Truck, Building2, Calendar, FileText, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Package, MessageSquare, User, Star, CreditCard, Truck, Building2, Calendar, FileText, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout() {
   const { user } = useAuth();
   const location = useLocation();
   const isDriver = user?.account_type === 'driver';
+
+  // Preserve scroll position per-route when switching bottom tabs
+  const scrollRef = useRef(null);
+  const scrollPositions = useRef({});
+  const prevPath = useRef(location.pathname);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    // Save scroll position of the page we're leaving
+    scrollPositions.current[prevPath.current] = container.scrollTop;
+    // Restore scroll position of the page we're entering
+    const saved = scrollPositions.current[location.pathname] ?? 0;
+    container.scrollTop = saved;
+    prevPath.current = location.pathname;
+  }, [location.pathname]);
 
   const sideLinks = isDriver ? [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -74,8 +90,8 @@ export default function DashboardLayout() {
         </aside>
 
         {/* Main content */}
-        <div className="flex-1 lg:ml-64">
-          <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto">
+        <div ref={scrollRef} className="flex-1 lg:ml-64 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
+          <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto pb-24 lg:pb-8">
             <Outlet />
           </div>
         </div>

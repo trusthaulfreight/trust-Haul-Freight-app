@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectItem } from "@/components/ui/select";
+import MobileSelect from '@/components/MobileSelect';
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Package } from 'lucide-react';
 
@@ -16,7 +19,7 @@ const TRUCK_TYPES = ['any', 'flatbed', 'dry_van', 'reefer', 'box_truck', 'step_d
 export default function PostLoad() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     title: '', description: '', pickup_address: '', pickup_city: '', pickup_state: '', pickup_zip: '',
     delivery_address: '', delivery_city: '', delivery_state: '', delivery_zip: '',
@@ -27,24 +30,50 @@ export default function PostLoad() {
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const queryClient = useQueryClient();
+
+  const postLoadMutation = useMutation({
+    mutationFn: async () => {
+      const profiles = await base44.entities.ShipperProfile.filter({ user_id: user.id });
+      const profile = profiles[0];
+      return base44.entities.Load.create({
+        ...form,
+        shipper_id: profile?.id || '',
+        shipper_user_id: user.id,
+        weight_lbs: Number(form.weight_lbs) || undefined,
+        budget: Number(form.budget) || undefined,
+        distance_miles: Number(form.distance_miles) || undefined,
+        status: 'posted',
+      });
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['my-loads'] });
+      const previous = queryClient.getQueryData(['my-loads']);
+      const optimistic = {
+        id: `optimistic-${Date.now()}`,
+        ...form,
+        shipper_user_id: user.id,
+        status: 'posted',
+        created_date: new Date().toISOString(),
+      };
+      queryClient.setQueryData(['my-loads'], (old = []) => [optimistic, ...old]);
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      queryClient.setQueryData(['my-loads'], ctx.previous);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-loads'] });
+      navigate('/my-loads');
+    },
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    const profiles = await base44.entities.ShipperProfile.filter({ user_id: user.id });
-    const profile = profiles[0];
-    await base44.entities.Load.create({
-      ...form,
-      shipper_id: profile?.id || '',
-      shipper_user_id: user.id,
-      weight_lbs: Number(form.weight_lbs) || undefined,
-      budget: Number(form.budget) || undefined,
-      distance_miles: Number(form.distance_miles) || undefined,
-
-      status: 'posted',
-    });
-    setLoading(false);
-    navigate('/my-loads');
+    postLoadMutation.mutate();
   };
+
+  const loading = postLoadMutation.isPending;
 
   const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 
@@ -75,12 +104,9 @@ export default function PostLoad() {
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Truck Type Required</Label>
-                <Select value={form.truck_type_required} onValueChange={v => update('truck_type_required', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TRUCK_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t === 'any' ? 'Any Type' : t.replace(/_/g, ' ')}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <MobileSelect value={form.truck_type_required} onValueChange={v => update('truck_type_required', v)} label="Truck Type">
+                  {TRUCK_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t === 'any' ? 'Any Type' : t.replace(/_/g, ' ')}</SelectItem>)}
+                </MobileSelect>
               </div>
               <div className="space-y-2">
                 <Label>Weight (lbs)</Label>
@@ -100,10 +126,9 @@ export default function PostLoad() {
             <div className="space-y-2 sm:col-span-2"><Label>Address</Label><Input value={form.pickup_address} onChange={e => update('pickup_address', e.target.value)} placeholder="Street address" /></div>
             <div className="space-y-2"><Label>City</Label><Input value={form.pickup_city} onChange={e => update('pickup_city', e.target.value)} required placeholder="City" /></div>
             <div className="space-y-2"><Label>State</Label>
-              <Select value={form.pickup_state} onValueChange={v => update('pickup_state', v)}>
-                <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
+              <MobileSelect value={form.pickup_state} onValueChange={v => update('pickup_state', v)} placeholder="State" label="Pickup State">
+                {US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </MobileSelect>
             </div>
             <div className="space-y-2"><Label>Zip Code</Label><Input value={form.pickup_zip} onChange={e => update('pickup_zip', e.target.value)} placeholder="12345" /></div>
             <div className="space-y-2"><Label>Pickup Date</Label><Input type="date" value={form.pickup_date} onChange={e => update('pickup_date', e.target.value)} /></div>
@@ -116,10 +141,9 @@ export default function PostLoad() {
             <div className="space-y-2 sm:col-span-2"><Label>Address</Label><Input value={form.delivery_address} onChange={e => update('delivery_address', e.target.value)} placeholder="Street address" /></div>
             <div className="space-y-2"><Label>City</Label><Input value={form.delivery_city} onChange={e => update('delivery_city', e.target.value)} required placeholder="City" /></div>
             <div className="space-y-2"><Label>State</Label>
-              <Select value={form.delivery_state} onValueChange={v => update('delivery_state', v)}>
-                <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
+              <MobileSelect value={form.delivery_state} onValueChange={v => update('delivery_state', v)} placeholder="State" label="Delivery State">
+                {US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </MobileSelect>
             </div>
             <div className="space-y-2"><Label>Zip Code</Label><Input value={form.delivery_zip} onChange={e => update('delivery_zip', e.target.value)} placeholder="12345" /></div>
             <div className="space-y-2"><Label>Delivery Date</Label><Input type="date" value={form.delivery_date} onChange={e => update('delivery_date', e.target.value)} /></div>

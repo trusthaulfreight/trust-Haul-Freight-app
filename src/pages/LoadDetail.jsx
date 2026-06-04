@@ -54,7 +54,7 @@ export default function LoadDetail() {
     mutationFn: async () => {
       const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
       const profile = profiles[0];
-      await base44.entities.LoadBid.create({
+      return base44.entities.LoadBid.create({
         load_id: id,
         driver_id: profile?.id || '',
         driver_user_id: user.id,
@@ -63,11 +63,28 @@ export default function LoadDetail() {
         status: 'pending',
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['load-bids', id] });
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['load-bids', id] });
+      const previous = queryClient.getQueryData(['load-bids', id]);
+      const optimistic = {
+        id: `optimistic-${Date.now()}`,
+        load_id: id,
+        driver_user_id: user.id,
+        bid_amount: Number(bidAmount),
+        message: bidMessage,
+        status: 'pending',
+      };
+      queryClient.setQueryData(['load-bids', id], (old = []) => [...old, optimistic]);
       setBidOpen(false);
       setBidAmount('');
       setBidMessage('');
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      queryClient.setQueryData(['load-bids', id], ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['load-bids', id] });
     },
   });
 
@@ -79,13 +96,29 @@ export default function LoadDetail() {
         assigned_driver_id: bid.driver_id,
         assigned_driver_user_id: bid.driver_user_id,
       });
-      // Reject other bids
       const otherBids = bids.filter(b => b.id !== bid.id && b.status === 'pending');
       for (const ob of otherBids) {
         await base44.entities.LoadBid.update(ob.id, { status: 'rejected' });
       }
     },
-    onSuccess: () => {
+    onMutate: async (bid) => {
+      await queryClient.cancelQueries({ queryKey: ['load-bids', id] });
+      await queryClient.cancelQueries({ queryKey: ['load', id] });
+      const prevBids = queryClient.getQueryData(['load-bids', id]);
+      const prevLoad = queryClient.getQueryData(['load', id]);
+      queryClient.setQueryData(['load-bids', id], (old = []) =>
+        old.map(b => b.id === bid.id ? { ...b, status: 'accepted' } : b.status === 'pending' ? { ...b, status: 'rejected' } : b)
+      );
+      queryClient.setQueryData(['load', id], (old) =>
+        old ? { ...old, status: 'assigned', assigned_driver_user_id: bid.driver_user_id } : old
+      );
+      return { prevBids, prevLoad };
+    },
+    onError: (_err, _vars, ctx) => {
+      queryClient.setQueryData(['load-bids', id], ctx.prevBids);
+      queryClient.setQueryData(['load', id], ctx.prevLoad);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['load', id] });
       queryClient.invalidateQueries({ queryKey: ['load-bids', id] });
     },
