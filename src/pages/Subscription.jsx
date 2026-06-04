@@ -14,7 +14,7 @@ const plans = [
   {
     id: 'basic',
     name: 'Starter',
-    price: 49,
+    price: 69.99,
     icon: Zap,
     features: [
       'Up to 10 load bids per month',
@@ -29,7 +29,7 @@ const plans = [
   {
     id: 'premium',
     name: 'Pro Hauler',
-    price: 99,
+    price: 149.99,
     icon: Crown,
     popular: true,
     features: [
