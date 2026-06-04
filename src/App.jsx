@@ -36,6 +36,8 @@ import Subscription from '@/pages/Subscription';
 import LoadCalendar from '@/pages/LoadCalendar';
 import ShipmentReport from '@/pages/ShipmentReport';
 import BulkLoads from '@/pages/BulkLoads';
+import About from '@/pages/About';
+import Contact from '@/pages/Contact';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -79,6 +81,8 @@ const AuthenticatedApp = () => {
       {/* Public landing page */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Landing />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
       </Route>
 
       {/* Protected routes */}

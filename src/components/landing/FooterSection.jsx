@@ -33,6 +33,14 @@ export default function FooterSection() {
           </div>
 
           <div>
+            <h4 className="font-bold mb-4">Company</h4>
+            <ul className="space-y-2 text-sm text-white/60">
+              <li><Link to="/about" className="hover:text-secondary transition-colors">About Us</Link></li>
+              <li><Link to="/contact" className="hover:text-secondary transition-colors">Contact</Link></li>
+            </ul>
+          </div>
+
+          <div>
             <h4 className="font-bold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm text-white/60">
               <li><span className="cursor-pointer hover:text-secondary transition-colors">Terms of Service</span></li>
