@@ -1,0 +1,59 @@
+{
+  "name": "PaymentHold",
+  "type": "object",
+  "properties": {
+    "load_id": {
+      "type": "string",
+      "description": "Reference to the Load"
+    },
+    "shipper_user_id": {
+      "type": "string"
+    },
+    "driver_user_id": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Held payment amount in USD"
+    },
+    "platform_fee": {
+      "type": "number",
+      "description": "Platform fee (5% of amount)"
+    },
+    "driver_payout": {
+      "type": "number",
+      "description": "Amount released to driver after platform fee"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "held",
+        "released",
+        "refunded",
+        "disputed"
+      ],
+      "default": "held",
+      "description": "held = payment collected but not released; released = sent to driver on pickup; refunded = returned to shipper"
+    },
+    "held_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "released_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stripe_payment_intent_id": {
+      "type": "string",
+      "description": "Stripe PaymentIntent ID for tracking"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "load_id",
+    "shipper_user_id",
+    "amount"
+  ]
+}
