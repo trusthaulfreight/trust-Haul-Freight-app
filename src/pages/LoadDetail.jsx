@@ -175,7 +175,6 @@ export default function LoadDetail() {
                 {load.distance_miles && <div><span className="text-muted-foreground">Distance:</span> <span className="font-medium ml-1">{load.distance_miles} miles</span></div>}
                 {load.commodity && <div><span className="text-muted-foreground">Commodity:</span> <span className="font-medium ml-1">{load.commodity}</span></div>}
                 {load.dimensions && <div><span className="text-muted-foreground">Dimensions:</span> <span className="font-medium ml-1">{load.dimensions}</span></div>}
-                {load.commitment_deposit && <div><span className="text-muted-foreground">Commitment Deposit:</span> <span className="font-medium ml-1">${load.commitment_deposit}</span></div>}
               </div>
               {load.description && <p className="mt-4 text-sm text-muted-foreground">{load.description}</p>}
               {load.special_instructions && (
