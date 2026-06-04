@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Crown } from 'lucide-react';
+import { Check, Zap, Crown, Building2, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const plans = [
@@ -110,8 +110,29 @@ export default function PricingSection() {
           ))}
         </div>
 
-        <p className="text-center text-white/40 text-sm mt-8">
-          Shippers post loads for FREE. No hidden fees. Cancel anytime.
+        {/* Shipper callout */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-12 max-w-2xl mx-auto rounded-2xl border border-white/10 bg-white/5 p-6 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left"
+        >
+          <div className="h-14 w-14 rounded-2xl bg-secondary/20 flex items-center justify-center flex-shrink-0">
+            <Building2 className="h-7 w-7 text-secondary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold mb-1">Shippers — Always Free</h3>
+            <p className="text-white/60 text-sm">Post unlimited loads, browse verified drivers, and manage shipments at no cost. TrustHaul only charges drivers — never shippers. Payment between you and your driver is handled directly, with zero commission.</p>
+            <Link to="/register">
+              <Button variant="link" className="text-secondary px-0 mt-2 h-auto font-semibold">
+                Post your first load free →
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+
+        <p className="text-center text-white/40 text-sm mt-6">
+          No commissions. No hidden fees. No dispatch cuts. Cancel driver subscription anytime.
         </p>
       </div>
     </section>

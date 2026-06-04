@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Calendar, Package, DollarSign, Truck, Clock, User, Star, ShieldCheck, MessageSquare, ArrowLeft, Send, Loader2, Lock, Unlock } from 'lucide-react';
+import { MapPin, Calendar, Package, DollarSign, Truck, Clock, User, Star, ShieldCheck, MessageSquare, ArrowLeft, Send, Loader2, CheckCircle2, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -38,14 +38,7 @@ export default function LoadDetail() {
     enabled: !!id,
   });
 
-  const { data: paymentHold } = useQuery({
-    queryKey: ['payment-hold', id],
-    queryFn: async () => {
-      const holds = await base44.entities.PaymentHold.filter({ load_id: id });
-      return holds[0] || null;
-    },
-    enabled: !!id,
-  });
+
 
   const { data: shipper } = useQuery({
     queryKey: ['shipper', load?.shipper_user_id],
@@ -86,18 +79,6 @@ export default function LoadDetail() {
         assigned_driver_id: bid.driver_id,
         assigned_driver_user_id: bid.driver_user_id,
       });
-      // Create payment hold for the agreed bid amount
-      const platformFee = bid.bid_amount * 0.05;
-      await base44.entities.PaymentHold.create({
-        load_id: id,
-        shipper_user_id: user.id,
-        driver_user_id: bid.driver_user_id,
-        amount: bid.bid_amount,
-        platform_fee: platformFee,
-        driver_payout: bid.bid_amount - platformFee,
-        status: 'held',
-        held_at: new Date().toISOString(),
-      });
       // Reject other bids
       const otherBids = bids.filter(b => b.id !== bid.id && b.status === 'pending');
       for (const ob of otherBids) {
@@ -107,26 +88,14 @@ export default function LoadDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['load', id] });
       queryClient.invalidateQueries({ queryKey: ['load-bids', id] });
-      queryClient.invalidateQueries({ queryKey: ['payment-hold', id] });
     },
   });
 
   const updateStatus = useMutation({
     mutationFn: async (newStatus) => {
       await base44.entities.Load.update(id, { status: newStatus });
-      // Release payment hold when driver marks pickup (in_transit)
-      if (newStatus === 'in_transit' && paymentHold?.id && paymentHold.status === 'held') {
-        await base44.entities.PaymentHold.update(paymentHold.id, {
-          status: 'released',
-          released_at: new Date().toISOString(),
-          notes: 'Payment released to driver upon pickup confirmation',
-        });
-      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['load', id] });
-      queryClient.invalidateQueries({ queryKey: ['payment-hold', id] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['load', id] }),
   });
 
   if (isLoading) return (
@@ -317,35 +286,18 @@ export default function LoadDetail() {
             </Card>
           )}
 
-          {/* Payment Hold Status */}
-          {paymentHold && (
-            <Card className={paymentHold.status === 'held' ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-green-500/30 bg-green-500/5'}>
+          {/* Direct Payment Info */}
+          {load.budget && (load.status === 'assigned' || load.status === 'in_transit' || load.status === 'delivered') && (
+            <Card className="border-green-500/30 bg-green-500/5">
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  {paymentHold.status === 'held' ? (
-                    <Lock className="h-4 w-4 text-yellow-600" />
-                  ) : (
-                    <Unlock className="h-4 w-4 text-green-600" />
-                  )}
-                  <p className="text-sm font-semibold">
-                    {paymentHold.status === 'held' ? 'Payment Held in Escrow' : 'Payment Released'}
-                  </p>
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <p className="text-sm font-semibold text-green-700">Agreed Rate</p>
                 </div>
-                <p className="text-2xl font-bold text-green-600">${paymentHold.amount?.toLocaleString()}</p>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="flex justify-between"><span>Platform fee (5%):</span><span>-${paymentHold.platform_fee?.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-semibold text-foreground"><span>Driver payout:</span><span>${paymentHold.driver_payout?.toFixed(2)}</span></div>
-                </div>
-                {paymentHold.status === 'held' && (
-                  <p className="text-xs text-yellow-700 bg-yellow-500/10 rounded p-2 mt-2">
-                    🔒 Funds released to driver upon pickup confirmation
-                  </p>
-                )}
-                {paymentHold.status === 'released' && (
-                  <p className="text-xs text-green-700 bg-green-500/10 rounded p-2 mt-2">
-                    ✅ Payment released to driver at pickup
-                  </p>
-                )}
+                <p className="text-2xl font-bold text-green-600">${load.budget?.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground bg-muted rounded p-2">
+                  💡 Payment is handled directly between driver and shipper. TrustHaul charges no commission.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -355,7 +307,7 @@ export default function LoadDetail() {
             <Card>
               <CardContent className="p-4">
                 <Button onClick={() => updateStatus.mutate('in_transit')} className="w-full bg-secondary hover:bg-secondary/90 text-white">
-                  <Unlock className="mr-2 h-4 w-4" /> Confirm Pickup & Release Payment
+                  <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm Pickup — Start Transit
                 </Button>
               </CardContent>
             </Card>

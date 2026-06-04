@@ -22,7 +22,7 @@ export default function PostLoad() {
     delivery_address: '', delivery_city: '', delivery_state: '', delivery_zip: '',
     pickup_date: '', delivery_date: '', truck_type_required: 'any',
     weight_lbs: '', dimensions: '', commodity: '', special_instructions: '',
-    budget: '', distance_miles: '', is_urgent: false, commitment_deposit: '',
+    budget: '', distance_miles: '', is_urgent: false,
   });
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -39,7 +39,7 @@ export default function PostLoad() {
       weight_lbs: Number(form.weight_lbs) || undefined,
       budget: Number(form.budget) || undefined,
       distance_miles: Number(form.distance_miles) || undefined,
-      commitment_deposit: Number(form.commitment_deposit) || undefined,
+
       status: 'posted',
     });
     setLoading(false);
@@ -132,7 +132,7 @@ export default function PostLoad() {
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="space-y-2"><Label>Budget ($)</Label><Input type="number" value={form.budget} onChange={e => update('budget', e.target.value)} placeholder="1500" /></div>
               <div className="space-y-2"><Label>Distance (miles)</Label><Input type="number" value={form.distance_miles} onChange={e => update('distance_miles', e.target.value)} placeholder="500" /></div>
-              <div className="space-y-2"><Label>Commitment Deposit ($)</Label><Input type="number" value={form.commitment_deposit} onChange={e => update('commitment_deposit', e.target.value)} placeholder="100" /></div>
+
             </div>
             <div className="space-y-2">
               <Label>Special Instructions</Label>

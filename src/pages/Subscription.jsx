@@ -163,13 +163,24 @@ export default function Subscription() {
         })}
       </div>
 
-      <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Payment is processed securely through Mercury. For billing inquiries, contact{' '}
-            <a href="mailto:admin@trusthaulfreight.com" className="text-secondary hover:underline">
-              admin@trusthaulfreight.com
-            </a>
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-6">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-secondary" /> What's Included
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-3 text-sm text-muted-foreground mb-4">
+            <div className="flex items-start gap-2"><Check className="h-4 w-4 text-secondary mt-0.5 flex-shrink-0" /><span>Access to verified load board — post & bid on loads</span></div>
+            <div className="flex items-start gap-2"><Check className="h-4 w-4 text-secondary mt-0.5 flex-shrink-0" /><span>Direct messaging with shippers — no middleman</span></div>
+            <div className="flex items-start gap-2"><Check className="h-4 w-4 text-secondary mt-0.5 flex-shrink-0" /><span>Verified driver badge displayed on your profile</span></div>
+            <div className="flex items-start gap-2"><Check className="h-4 w-4 text-secondary mt-0.5 flex-shrink-0" /><span>Real-time GPS tracking & load status updates</span></div>
+          </div>
+          <div className="border-t border-border pt-4 mt-2">
+            <p className="text-xs text-muted-foreground">
+              💡 <strong>Payment between drivers & shippers is handled directly.</strong> TrustHaul only charges drivers a flat monthly subscription — no commissions, no hidden fees, no dispatch cuts.
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Billing questions? <a href="mailto:admin@trusthaulfreight.com" className="text-secondary hover:underline">admin@trusthaulfreight.com</a>
           </p>
         </CardContent>
       </Card>
