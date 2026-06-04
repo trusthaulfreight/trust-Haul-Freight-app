@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Calendar, DollarSign, ArrowRight, Package } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { MapPin, Calendar, DollarSign, ArrowRight, Package, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 const statusColors = {
@@ -66,6 +67,37 @@ export default function MyLoads() {
   const completed = loads.filter(l => l.status === 'delivered');
   const cancelled = loads.filter(l => l.status === 'cancelled');
 
+  const downloadCSV = () => {
+    const rows = loads.filter(l => l.status === 'delivered');
+    if (rows.length === 0) return alert('No completed loads to export.');
+    const headers = ['Title', 'Status', 'Pickup City', 'Pickup State', 'Delivery City', 'Delivery State', 'Pickup Date', 'Delivery Date', 'Budget ($)', 'Weight (lbs)', 'Distance (mi)', 'Commodity', 'Truck Type'];
+    const csv = [
+      headers.join(','),
+      ...rows.map(l => [
+        `"${l.title || ''}"`,
+        l.status || '',
+        `"${l.pickup_city || ''}"`,
+        l.pickup_state || '',
+        `"${l.delivery_city || ''}"`,
+        l.delivery_state || '',
+        l.pickup_date || '',
+        l.delivery_date || '',
+        l.budget || '',
+        l.weight_lbs || '',
+        l.distance_miles || '',
+        `"${l.commodity || ''}"`,
+        l.truck_type_required || '',
+      ].join(','))
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trusthaul-loads-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) return (
     <div className="flex justify-center py-20">
       <div className="w-8 h-8 border-4 border-muted border-t-secondary rounded-full animate-spin" />
@@ -74,7 +106,14 @@ export default function MyLoads() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold font-heading">My Loads</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold font-heading">My Loads</h1>
+        {!isDriver && (
+          <Button variant="outline" size="sm" onClick={downloadCSV} className="gap-2">
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+        )}
+      </div>
 
       <Tabs defaultValue="active">
         <TabsList>
