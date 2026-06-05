@@ -49,6 +49,11 @@ export default function Onboarding() {
   const handleComplete = async () => {
     setLoading(true);
     if (accountType === 'driver') {
+      // Set role first so RLS allows DriverProfile creation
+      await base44.auth.updateMe({
+        account_type: 'driver',
+        role: 'driver',
+      });
       const profile = await base44.entities.DriverProfile.create({
         user_id: user.id,
         company_name: form.company_name,
@@ -68,12 +73,14 @@ export default function Onboarding() {
         cdl_url: form.cdl_url || '',
       });
       await base44.auth.updateMe({
-        account_type: 'driver',
-        role: 'driver',
         onboarding_complete: true,
         profile_id: profile.id,
       });
     } else {
+      await base44.auth.updateMe({
+        account_type: 'shipper',
+        role: 'shipper',
+      });
       const profile = await base44.entities.ShipperProfile.create({
         user_id: user.id,
         company_name: form.company_name,
@@ -87,8 +94,6 @@ export default function Onboarding() {
         address: form.address,
       });
       await base44.auth.updateMe({
-        account_type: 'shipper',
-        role: 'shipper',
         onboarding_complete: true,
         profile_id: profile.id,
       });
