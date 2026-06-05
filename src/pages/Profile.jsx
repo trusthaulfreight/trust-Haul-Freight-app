@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { DriverProfile, ShipperProfile, Profiles, uploadFile } from '@/api/db';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,14 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ShieldCheck, Star, Truck, Building2, Save, Loader2, Upload, Trash2 } from 'lucide-react';
+import { ShieldCheck, Star, Save, Loader2, Upload, Trash2 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const queryClient = useQueryClient();
   const isDriver = user?.account_type === 'driver';
   const [editing, setEditing] = useState(false);
@@ -27,28 +28,29 @@ export default function Profile() {
     setDeleting(true);
     try {
       if (isDriver) {
-        const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
-        if (profiles[0]) await base44.entities.DriverProfile.delete(profiles[0].id);
+        const profiles = await DriverProfile.filter({ user_id: user.id });
+        if (profiles[0]) await DriverProfile.delete(profiles[0].id);
       } else {
-        const profiles = await base44.entities.ShipperProfile.filter({ user_id: user.id });
-        if (profiles[0]) await base44.entities.ShipperProfile.delete(profiles[0].id);
+        const profiles = await ShipperProfile.filter({ user_id: user.id });
+        if (profiles[0]) await ShipperProfile.delete(profiles[0].id);
       }
-      base44.auth.logout('/');
-    } catch (e) {
+      await logout();
+    } catch {
       setDeleting(false);
     }
   };
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile'],
+    queryKey: ['profile', user?.id],
     queryFn: async () => {
       const profiles = isDriver
-        ? await base44.entities.DriverProfile.filter({ user_id: user.id })
-        : await base44.entities.ShipperProfile.filter({ user_id: user.id });
+        ? await DriverProfile.filter({ user_id: user.id })
+        : await ShipperProfile.filter({ user_id: user.id });
       const p = profiles[0];
       if (p) setForm(p);
       return p;
     },
+    enabled: !!user?.id,
   });
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -56,31 +58,31 @@ export default function Profile() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (isDriver) {
-        return base44.entities.DriverProfile.update(profile.id, form);
+        return DriverProfile.update(profile.id, form);
       } else {
-        return base44.entities.ShipperProfile.update(profile.id, form);
+        return ShipperProfile.update(profile.id, form);
       }
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['profile'] });
-      const previous = queryClient.getQueryData(['profile']);
-      queryClient.setQueryData(['profile'], (old) => old ? { ...old, ...form } : old);
+      await queryClient.cancelQueries({ queryKey: ['profile', user?.id] });
+      const previous = queryClient.getQueryData(['profile', user?.id]);
+      queryClient.setQueryData(['profile', user?.id], old => old ? { ...old, ...form } : old);
       setEditing(false);
       return { previous };
     },
     onError: (_err, _vars, ctx) => {
-      queryClient.setQueryData(['profile'], ctx.previous);
+      queryClient.setQueryData(['profile', user?.id], ctx.previous);
       setEditing(true);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     },
   });
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await uploadFile(file, user.id);
     update('profile_photo_url', file_url);
   };
 
@@ -105,7 +107,6 @@ export default function Profile() {
         </Button>
       </div>
 
-      {/* Profile Header */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-6">
@@ -145,7 +146,6 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      {/* Details */}
       <Card>
         <CardHeader><CardTitle className="text-lg">Details</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -193,13 +193,13 @@ export default function Profile() {
           )}
         </CardContent>
       </Card>
-      {/* Delete Account */}
+
       <Card className="border-destructive/30">
         <CardHeader><CardTitle className="text-lg text-destructive">Danger Zone</CardTitle></CardHeader>
         <CardContent className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">Delete Account</p>
-            <p className="text-xs text-muted-foreground">Permanently delete your account and all data. This cannot be undone.</p>
+            <p className="text-xs text-muted-foreground">Permanently delete your account and all data.</p>
           </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -216,11 +216,7 @@ export default function Profile() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteAccount}
-                  disabled={deleting}
-                  className="bg-destructive hover:bg-destructive/90"
-                >
+                <AlertDialogAction onClick={handleDeleteAccount} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
                   {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Yes, Delete My Account
                 </AlertDialogAction>

@@ -1,6 +1,7 @@
+import { Load, LoadBid, DriverProfile, ShipperProfile } from '@/api/db';
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,14 +28,14 @@ export default function LoadDetail() {
   const { data: load, isLoading } = useQuery({
     queryKey: ['load', id],
     queryFn: async () => {
-      const loads = await base44.entities.Load.filter({ id });
+      const loads = await Load.filter({ id });
       return loads[0];
     },
   });
 
   const { data: bids = [] } = useQuery({
     queryKey: ['load-bids', id],
-    queryFn: () => base44.entities.LoadBid.filter({ load_id: id }),
+    queryFn: () => LoadBid.filter({ load_id: id }),
     enabled: !!id,
   });
 
@@ -44,7 +45,7 @@ export default function LoadDetail() {
     queryKey: ['shipper', load?.shipper_user_id],
     queryFn: async () => {
       if (!load?.shipper_user_id) return null;
-      const profiles = await base44.entities.ShipperProfile.filter({ user_id: load.shipper_user_id });
+      const profiles = await ShipperProfile.filter({ user_id: load.shipper_user_id });
       return profiles[0];
     },
     enabled: !!load?.shipper_user_id,
@@ -52,9 +53,9 @@ export default function LoadDetail() {
 
   const submitBid = useMutation({
     mutationFn: async () => {
-      const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
+      const profiles = await DriverProfile.filter({ user_id: user.id });
       const profile = profiles[0];
-      return base44.entities.LoadBid.create({
+      return LoadBid.create({
         load_id: id,
         driver_id: profile?.id || '',
         driver_user_id: user.id,
@@ -90,15 +91,15 @@ export default function LoadDetail() {
 
   const acceptBid = useMutation({
     mutationFn: async (bid) => {
-      await base44.entities.LoadBid.update(bid.id, { status: 'accepted' });
-      await base44.entities.Load.update(id, {
+      await LoadBid.update(bid.id, { status: 'accepted' });
+      await Load.update(id, {
         status: 'assigned',
         assigned_driver_id: bid.driver_id,
         assigned_driver_user_id: bid.driver_user_id,
       });
       const otherBids = bids.filter(b => b.id !== bid.id && b.status === 'pending');
       for (const ob of otherBids) {
-        await base44.entities.LoadBid.update(ob.id, { status: 'rejected' });
+        await LoadBid.update(ob.id, { status: 'rejected' });
       }
     },
     onMutate: async (bid) => {
@@ -126,7 +127,7 @@ export default function LoadDetail() {
 
   const updateStatus = useMutation({
     mutationFn: async (newStatus) => {
-      await base44.entities.Load.update(id, { status: newStatus });
+      await Load.update(id, { status: newStatus });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['load', id] }),
   });
@@ -164,7 +165,7 @@ export default function LoadDetail() {
             <Badge className={statusColors[load.status] || 'bg-muted'}>{load.status?.replace('_', ' ')}</Badge>
             {load.is_urgent && <Badge className="bg-destructive/10 text-destructive">Urgent</Badge>}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Posted {format(new Date(load.created_date), 'MMM d, yyyy')}</p>
+          <p className="text-sm text-muted-foreground mt-1">Posted {format(new Date(load.created_at), 'MMM d, yyyy')}</p>
         </div>
         {load.budget && <p className="text-3xl font-bold text-green-600">${load.budget.toLocaleString()}</p>}
       </div>

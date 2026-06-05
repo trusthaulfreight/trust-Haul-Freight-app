@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { DriverProfile, ShipperProfile, Profiles, uploadFile } from '@/api/db';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Truck, Building2, ArrowRight, Upload, Loader2 } from 'lucide-react';
+import { Truck, Building2, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TRUCK_TYPES = ['flatbed', 'dry_van', 'reefer', 'box_truck', 'step_deck', 'hotshot', 'tanker', 'car_hauler'];
@@ -21,11 +21,13 @@ export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [accountType, setAccountType] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [form, setForm] = useState({
     company_name: '', phone: '', city: '', state: '', zip_code: '', bio: '',
     mc_number: '', dot_number: '', cdl_number: '', cdl_state: '', years_experience: '',
     truck_types: [], service_radius_miles: 500,
     business_type: 'small_business', ein_number: '', address: '',
+    insurance_url: '', cdl_url: '',
   });
 
   const updateForm = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -42,64 +44,77 @@ export default function Onboarding() {
   const handleFileUpload = async (e, field) => {
     const file = e.target.files[0];
     if (!file) return;
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    updateForm(field, file_url);
+    try {
+      const { file_url } = await uploadFile(file, user.id);
+      updateForm(field, file_url);
+    } catch (err) {
+      setError('File upload failed. You can add documents later from your profile.');
+    }
   };
 
   const handleComplete = async () => {
     setLoading(true);
-    if (accountType === 'driver') {
-      // Set role first so RLS allows DriverProfile creation
-      await base44.auth.updateMe({
-        account_type: 'driver',
-        role: 'driver',
-      });
-      const profile = await base44.entities.DriverProfile.create({
-        user_id: user.id,
-        company_name: form.company_name,
-        phone: form.phone,
-        city: form.city,
-        state: form.state,
-        zip_code: form.zip_code,
-        bio: form.bio,
-        mc_number: form.mc_number,
-        dot_number: form.dot_number,
-        cdl_number: form.cdl_number,
-        cdl_state: form.cdl_state,
-        years_experience: Number(form.years_experience) || 0,
-        truck_types: form.truck_types,
-        service_radius_miles: Number(form.service_radius_miles) || 500,
-        insurance_url: form.insurance_url || '',
-        cdl_url: form.cdl_url || '',
-      });
-      await base44.auth.updateMe({
-        onboarding_complete: true,
-        profile_id: profile.id,
-      });
-    } else {
-      await base44.auth.updateMe({
-        account_type: 'shipper',
-        role: 'shipper',
-      });
-      const profile = await base44.entities.ShipperProfile.create({
-        user_id: user.id,
-        company_name: form.company_name,
-        phone: form.phone,
-        city: form.city,
-        state: form.state,
-        zip_code: form.zip_code,
-        bio: form.bio,
-        business_type: form.business_type,
-        ein_number: form.ein_number,
-        address: form.address,
-      });
-      await base44.auth.updateMe({
-        onboarding_complete: true,
-        profile_id: profile.id,
-      });
+    setError('');
+    try {
+      if (accountType === 'driver') {
+        // 1. Create driver profile
+        const profile = await DriverProfile.create({
+          user_id: user.id,
+          company_name: form.company_name,
+          phone: form.phone,
+          city: form.city,
+          state: form.state,
+          zip_code: form.zip_code,
+          bio: form.bio,
+          mc_number: form.mc_number,
+          dot_number: form.dot_number,
+          cdl_number: form.cdl_number,
+          cdl_state: form.cdl_state,
+          years_experience: Number(form.years_experience) || 0,
+          truck_types: form.truck_types,
+          service_radius_miles: Number(form.service_radius_miles) || 500,
+          insurance_url: form.insurance_url || '',
+          cdl_url: form.cdl_url || '',
+        });
+        // 2. Update our profiles table
+        await Profiles.update(user.id, {
+          account_type: 'driver',
+          onboarding_complete: true,
+          profile_id: profile.id,
+          full_name: form.company_name || user.full_name,
+        });
+      } else {
+        // 1. Create shipper profile
+        const profile = await ShipperProfile.create({
+          user_id: user.id,
+          company_name: form.company_name,
+          phone: form.phone,
+          city: form.city,
+          state: form.state,
+          zip_code: form.zip_code,
+          bio: form.bio,
+          business_type: form.business_type,
+          ein_number: form.ein_number,
+          address: form.address,
+        });
+        // 2. Update our profiles table
+        await Profiles.update(user.id, {
+          account_type: 'shipper',
+          onboarding_complete: true,
+          profile_id: profile.id,
+          full_name: form.company_name || user.full_name,
+        });
+      }
+
+      // 3. Refresh auth context so the app knows onboarding is complete
+      await refreshUser();
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      console.error('Onboarding error:', err);
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    window.location.href = '/dashboard';
   };
 
   return (
@@ -115,6 +130,13 @@ export default function Onboarding() {
           </div>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
@@ -259,23 +281,25 @@ export default function Onboarding() {
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Upload Insurance Document</Label>
+                        <Label>Upload Insurance Document <span className="text-muted-foreground text-xs">(optional)</span></Label>
                         <Input type="file" accept=".pdf,.jpg,.png" onChange={e => handleFileUpload(e, 'insurance_url')} />
+                        {form.insurance_url && <p className="text-xs text-green-600">✓ Uploaded</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label>Upload CDL Copy</Label>
+                        <Label>Upload CDL Copy <span className="text-muted-foreground text-xs">(optional)</span></Label>
                         <Input type="file" accept=".pdf,.jpg,.png" onChange={e => handleFileUpload(e, 'cdl_url')} />
+                        {form.cdl_url && <p className="text-xs text-green-600">✓ Uploaded</p>}
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>EIN Number (optional)</Label>
+                      <Label>EIN Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
                       <Input value={form.ein_number} onChange={e => updateForm('ein_number', e.target.value)} placeholder="XX-XXXXXXX" />
                     </div>
                     <p className="text-sm text-muted-foreground p-4 bg-muted rounded-lg">
-                      As a shipper, you can post loads for <strong>free</strong>. We only charge drivers a subscription fee. 
+                      As a shipper, you can post loads for <strong>free</strong>. We only charge drivers a subscription fee.
                       You'll be able to browse verified drivers, view their ratings, and communicate directly.
                     </p>
                   </div>

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { DriverProfile } from '@/api/db';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,28 +62,22 @@ export default function Subscription() {
   }, []);
 
   const { data: profile } = useQuery({
-    queryKey: ['driver-profile-sub'],
+    queryKey: ['driver-profile-sub', user?.id],
     queryFn: async () => {
-      const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
+      const profiles = await DriverProfile.filter({ user_id: user.id });
       return profiles[0];
     },
+    enabled: !!user?.id,
   });
 
   const subscribeMutation = useMutation({
     mutationFn: async (planId) => {
-      // Block checkout inside iframe (preview mode)
-      if (window.self !== window.top) {
-        alert('Checkout only works from the published app, not the preview.');
-        return;
-      }
-      const response = await base44.functions.invoke('createCheckoutSession', {
-        plan: planId,
-        successUrl: `${window.location.origin}/subscription?success=true`,
-        cancelUrl: `${window.location.origin}/subscription?cancelled=true`,
+      // TODO: Replace this with your Stripe payment link or backend endpoint
+      // Example: window.location.href = 'https://buy.stripe.com/your-link';
+      toast({
+        title: 'Payment coming soon',
+        description: 'Stripe integration will be connected here. Contact admin@trusthaulfreight.com to subscribe.',
       });
-      if (response.data?.url) {
-        window.location.href = response.data.url;
-      }
     },
   });
 

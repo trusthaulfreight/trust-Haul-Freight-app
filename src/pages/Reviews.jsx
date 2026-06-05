@@ -1,5 +1,6 @@
+import { Review, Load } from '@/api/db';
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +36,7 @@ export default function Reviews() {
 
   const { data: myReviews = [] } = useQuery({
     queryKey: ['my-reviews'],
-    queryFn: () => base44.entities.Review.filter({ reviewee_id: user.id }, '-created_date'),
+    queryFn: () => Review.filter({ reviewee_id: user.id }, '-created_at'),
   });
 
   const { data: completedLoads = [] } = useQuery({
@@ -43,15 +44,15 @@ export default function Reviews() {
     queryFn: async () => {
       const isDriver = user?.account_type === 'driver';
       const loads = isDriver
-        ? await base44.entities.Load.filter({ assigned_driver_user_id: user.id, status: 'delivered' })
-        : await base44.entities.Load.filter({ shipper_user_id: user.id, status: 'delivered' });
+        ? await Load.filter({ assigned_driver_user_id: user.id, status: 'delivered' })
+        : await Load.filter({ shipper_user_id: user.id, status: 'delivered' });
       return loads;
     },
   });
 
   const { data: givenReviews = [] } = useQuery({
     queryKey: ['given-reviews'],
-    queryFn: () => base44.entities.Review.filter({ reviewer_id: user.id }),
+    queryFn: () => Review.filter({ reviewer_id: user.id }),
   });
 
   const reviewedLoadIds = new Set(givenReviews.map(r => r.load_id));
@@ -66,7 +67,7 @@ export default function Reviews() {
       const load = completedLoads.find(l => l.id === reviewLoadId);
       if (!load) return;
       const isDriver = user?.account_type === 'driver';
-      await base44.entities.Review.create({
+      await Review.create({
         load_id: reviewLoadId,
         reviewer_id: user.id,
         reviewee_id: isDriver ? load.shipper_user_id : load.assigned_driver_user_id,
@@ -165,7 +166,7 @@ export default function Reviews() {
             <div key={review.id} className="p-4 rounded-lg border border-border">
               <div className="flex items-center justify-between mb-2">
                 <StarRating value={review.rating} disabled />
-                <span className="text-xs text-muted-foreground">{format(new Date(review.created_date), 'MMM d, yyyy')}</span>
+                <span className="text-xs text-muted-foreground">{format(new Date(review.created_at), 'MMM d, yyyy')}</span>
               </div>
               {review.comment && <p className="text-sm text-muted-foreground">{review.comment}</p>}
               <Badge variant="outline" className="mt-2 capitalize text-xs">{review.reviewer_type}</Badge>

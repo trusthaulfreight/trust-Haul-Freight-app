@@ -1,5 +1,6 @@
+import { Load, LoadBid, DriverProfile, ShipperProfile } from '@/api/db';
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -59,8 +60,8 @@ export default function MyLoads() {
   const { data: loads = [], isLoading } = useQuery({
     queryKey: ['my-loads-page'],
     queryFn: () => isDriver
-      ? base44.entities.Load.filter({ assigned_driver_user_id: user.id }, '-created_date')
-      : base44.entities.Load.filter({ shipper_user_id: user.id }, '-created_date'),
+      ? Load.filter({ assigned_driver_user_id: user.id }, '-created_at')
+      : Load.filter({ shipper_user_id: user.id }, '-created_at'),
   });
 
   const active = loads.filter(l => ['posted', 'assigned', 'in_transit'].includes(l.status));

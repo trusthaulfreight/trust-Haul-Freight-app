@@ -1,5 +1,6 @@
+import { Load, LoadBid, DriverProfile, ShipperProfile } from '@/api/db';
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -42,8 +43,8 @@ export default function BulkLoads() {
   const { data: loads = [], isLoading } = useQuery({
     queryKey: ['bulk-loads', user?.id],
     queryFn: () => isDriver
-      ? base44.entities.Load.filter({ assigned_driver_user_id: user.id }, '-created_date', 100)
-      : base44.entities.Load.filter({ shipper_user_id: user.id }, '-created_date', 100),
+      ? Load.filter({ assigned_driver_user_id: user.id }, '-created_at', 100)
+      : Load.filter({ shipper_user_id: user.id }, '-created_at', 100),
   });
 
   const filtered = statusFilter === 'all' ? loads : loads.filter(l => l.status === statusFilter);
@@ -86,12 +87,12 @@ export default function BulkLoads() {
     try {
       if (bulkAction === 'delete') {
         for (const load of selectedLoads) {
-          await base44.entities.Load.delete(load.id);
+          await Load.delete(load.id);
         }
         toast({ title: `${selectedLoads.length} load(s) deleted` });
       } else {
         for (const load of selectedLoads) {
-          await base44.entities.Load.update(load.id, { status: bulkAction });
+          await Load.update(load.id, { status: bulkAction });
         }
         toast({ title: `${selectedLoads.length} load(s) updated to "${bulkAction.replace('_', ' ')}"` });
       }

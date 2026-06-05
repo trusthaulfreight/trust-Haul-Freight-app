@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, X, Truck, User, LogOut, LayoutDashboard, Package, MessageSquare, Star } from 'lucide-react';
+import { Menu, Truck, User, LogOut, LayoutDashboard, Package, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const LOGO_URL = "https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/dc3e653ae_logo.png";
-
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const isLanding = location.pathname === '/';
   const isAuth = user && user.id;
@@ -41,7 +38,10 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to={isAuth ? '/dashboard' : '/'} className="flex items-center gap-2">
-            <img src={LOGO_URL} alt="TrustHaul Freight" className="h-14 w-auto" />
+            <Truck className="h-7 w-7 text-secondary" />
+            <span className={`text-lg font-bold font-heading ${isLanding ? 'text-white' : 'text-foreground'}`}>
+              TrustHaul
+            </span>
           </Link>
 
           {/* Desktop Nav */}
@@ -88,7 +88,7 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => base44.auth.logout('/')} className="text-destructive">
+                  <DropdownMenuItem onClick={logout} className="text-destructive">
                     <LogOut className="h-4 w-4 mr-2" /> Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -130,7 +130,7 @@ export default function Navbar() {
                 ))}
                 <div className="border-t pt-4 mt-4 flex flex-col gap-3">
                   {isAuth ? (
-                    <Button variant="destructive" onClick={() => { base44.auth.logout('/'); setOpen(false); }}>
+                    <Button variant="destructive" onClick={() => { logout(); setOpen(false); }}>
                       Sign Out
                     </Button>
                   ) : (

@@ -7,18 +7,20 @@ import { motion } from 'framer-motion';
 export default function HeroSection() {
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-primary">
-      {/* Background image overlay */}
+      {/* Background warehouse image */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-20"
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1920&q=80')" }}
       />
       <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/95 to-primary/70" />
-      {/* Large watermark logo */}
-      <div className="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none">
+
+      {/* Transparent truck watermark - replaces Base44 logo */}
+      <div className="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none overflow-hidden">
         <img
-          src="https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/dc3e653ae_logo.png"
+          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=60"
           alt=""
-          className="w-[480px] h-auto opacity-10 select-none"
+          className="w-[600px] h-auto opacity-[0.07] select-none rounded-3xl"
+          style={{ filter: 'grayscale(100%)' }}
         />
       </div>
 
@@ -83,8 +85,8 @@ export default function HeroSection() {
             <div className="relative">
               <img
                 src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80"
-                alt="Freight truck"
-                className="rounded-2xl shadow-2xl shadow-black/30"
+                alt="Freight truck on highway"
+                className="rounded-2xl shadow-2xl shadow-black/30 w-full object-cover"
               />
               <div className="absolute -bottom-6 -left-6 bg-card rounded-xl p-4 shadow-xl border border-border">
                 <div className="flex items-center gap-3">

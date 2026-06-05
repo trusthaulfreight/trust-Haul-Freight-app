@@ -1,5 +1,6 @@
+import { Load, LoadBid, DriverProfile, ShipperProfile } from '@/api/db';
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -34,8 +35,8 @@ export default function LoadCalendar() {
   const { data: loads = [], isLoading } = useQuery({
     queryKey: ['calendar-loads', user?.id],
     queryFn: () => isDriver
-      ? base44.entities.Load.filter({ assigned_driver_user_id: user.id })
-      : base44.entities.Load.filter({ shipper_user_id: user.id }),
+      ? Load.filter({ assigned_driver_user_id: user.id })
+      : Load.filter({ shipper_user_id: user.id }),
   });
 
   // Build calendar grid

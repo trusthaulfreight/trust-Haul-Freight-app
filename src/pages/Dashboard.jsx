@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { Load, DriverProfile, ShipperProfile } from '@/api/db';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import PullToRefresh from '@/components/PullToRefresh';
@@ -24,37 +24,36 @@ export default function Dashboard() {
   const isDriver = user?.account_type === 'driver';
 
   const { data: myLoads = [] } = useQuery({
-    queryKey: ['my-loads'],
+    queryKey: ['my-loads', user?.id],
     queryFn: () => isDriver
-      ? base44.entities.Load.filter({ assigned_driver_user_id: user.id })
-      : base44.entities.Load.filter({ shipper_user_id: user.id }),
+      ? Load.filter({ assigned_driver_user_id: user.id })
+      : Load.filter({ shipper_user_id: user.id }),
+    enabled: !!user?.id,
   });
 
   const { data: recentLoads = [] } = useQuery({
     queryKey: ['recent-loads'],
-    queryFn: () => base44.entities.Load.filter({ status: 'posted' }, '-created_date', 8),
+    queryFn: () => Load.filter({ status: 'posted' }, '-created_at', 8),
   });
 
   const { data: profile } = useQuery({
-    queryKey: ['my-profile'],
+    queryKey: ['my-profile', user?.id],
     queryFn: async () => {
-      if (isDriver) {
-        const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id });
-        return profiles[0];
-      } else {
-        const profiles = await base44.entities.ShipperProfile.filter({ user_id: user.id });
-        return profiles[0];
-      }
+      const profiles = isDriver
+        ? await DriverProfile.filter({ user_id: user.id })
+        : await ShipperProfile.filter({ user_id: user.id });
+      return profiles[0];
     },
+    enabled: !!user?.id,
   });
 
-  // Real-time load updates via subscription
+  // Real-time load updates
   useEffect(() => {
-    const unsubscribeLoads = base44.entities.Load.subscribe((event) => {
+    const unsubscribe = Load.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['my-loads'] });
       queryClient.invalidateQueries({ queryKey: ['recent-loads'] });
     });
-    return () => unsubscribeLoads();
+    return unsubscribe;
   }, [queryClient]);
 
   if (!user?.onboarding_complete) {
@@ -76,7 +75,6 @@ export default function Dashboard() {
     return (
       <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-6">
-        {/* Driver header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold font-heading">Driver Dashboard</h1>
@@ -89,7 +87,6 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Subscription alert */}
         {profile?.subscription_plan === 'none' && (
           <Card className="border-secondary/40 bg-secondary/5">
             <CardContent className="p-4 flex items-center justify-between gap-3">
@@ -107,55 +104,27 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Driver stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                <Truck className="h-5 w-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{inTransitLoads.length}</p>
-                <p className="text-xs text-muted-foreground">In Transit</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{completedLoads.length}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-                <DollarSign className="h-5 w-5 text-secondary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">${totalEarnings.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Total Earned</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
-                <Star className="h-5 w-5 text-yellow-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{profile?.average_rating?.toFixed(1) || '—'}</p>
-                <p className="text-xs text-muted-foreground">Rating ({profile?.total_reviews || 0} reviews)</p>
-              </div>
-            </CardContent>
-          </Card>
+          {[
+            { label: 'In Transit', value: inTransitLoads.length, icon: Truck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+            { label: 'Completed', value: completedLoads.length, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
+            { label: 'Total Earned', value: `$${totalEarnings.toLocaleString()}`, icon: DollarSign, color: 'text-secondary', bg: 'bg-secondary/10' },
+            { label: `Rating (${profile?.total_reviews || 0})`, value: profile?.average_rating?.toFixed(1) || '—', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+          ].map(stat => (
+            <Card key={stat.label}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`h-11 w-11 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Verification status */}
         {profile?.verification_status !== 'verified' && (
           <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-500/5 dark:border-yellow-500/20">
             <CardContent className="p-4 flex items-center gap-3">
@@ -172,7 +141,6 @@ export default function Dashboard() {
         )}
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Active / In-Transit loads */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -189,27 +157,24 @@ export default function Dashboard() {
                   <p className="text-sm text-muted-foreground">No active loads right now</p>
                   <Link to="/loads" className="text-xs text-secondary hover:underline mt-1 inline-block">Browse the load board →</Link>
                 </div>
-              ) : (
-                activeLoads.slice(0, 5).map(load => (
-                  <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-sm font-semibold leading-tight">{load.title}</h4>
-                      <Badge className={`text-xs capitalize shrink-0 ${statusColors[load.status]}`}>{load.status?.replace('_', ' ')}</Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3 shrink-0" />
-                      <span>{load.pickup_city}, {load.pickup_state}</span>
-                      <ArrowRight className="h-3 w-3 shrink-0" />
-                      <span>{load.delivery_city}, {load.delivery_state}</span>
-                    </div>
-                    {load.budget && <p className="text-xs font-semibold text-green-600 mt-1">${load.budget.toLocaleString()}</p>}
-                  </Link>
-                ))
-              )}
+              ) : activeLoads.slice(0, 5).map(load => (
+                <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-sm font-semibold leading-tight">{load.title}</h4>
+                    <Badge className={`text-xs capitalize shrink-0 ${statusColors[load.status]}`}>{load.status?.replace('_', ' ')}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span>{load.pickup_city}, {load.pickup_state}</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                    <span>{load.delivery_city}, {load.delivery_state}</span>
+                  </div>
+                  {load.budget && <p className="text-xs font-semibold text-green-600 mt-1">${load.budget.toLocaleString()}</p>}
+                </Link>
+              ))}
             </CardContent>
           </Card>
 
-          {/* New available loads */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -222,42 +187,39 @@ export default function Dashboard() {
             <CardContent className="space-y-2">
               {recentLoads.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No loads posted yet</p>
-              ) : (
-                recentLoads.map(load => (
-                  <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-semibold truncate">{load.title}</h4>
-                          {load.is_urgent && <Badge className="bg-destructive/10 text-destructive text-xs shrink-0">Urgent</Badge>}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span>{load.pickup_city}, {load.pickup_state}</span>
-                          <ArrowRight className="h-3 w-3 shrink-0" />
-                          <span>{load.delivery_city}, {load.delivery_state}</span>
-                        </div>
-                        {load.pickup_date && (
-                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />{format(new Date(load.pickup_date), 'MMM d, yyyy')}
-                          </p>
-                        )}
+              ) : recentLoads.map(load => (
+                <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-semibold truncate">{load.title}</h4>
+                        {load.is_urgent && <Badge className="bg-destructive/10 text-destructive text-xs shrink-0">Urgent</Badge>}
                       </div>
-                      {load.budget && (
-                        <div className="text-right shrink-0">
-                          <p className="text-base font-bold text-green-600">${load.budget.toLocaleString()}</p>
-                          {load.distance_miles && <p className="text-xs text-muted-foreground">${(load.budget / load.distance_miles).toFixed(2)}/mi</p>}
-                        </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span>{load.pickup_city}, {load.pickup_state}</span>
+                        <ArrowRight className="h-3 w-3 shrink-0" />
+                        <span>{load.delivery_city}, {load.delivery_state}</span>
+                      </div>
+                      {load.pickup_date && (
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />{format(new Date(load.pickup_date), 'MMM d, yyyy')}
+                        </p>
                       )}
                     </div>
-                  </Link>
-                ))
-              )}
+                    {load.budget && (
+                      <div className="text-right shrink-0">
+                        <p className="text-base font-bold text-green-600">${load.budget.toLocaleString()}</p>
+                        {load.distance_miles && <p className="text-xs text-muted-foreground">${(load.budget / load.distance_miles).toFixed(2)}/mi</p>}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ))}
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick links */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Load Board', path: '/loads', icon: Package },
@@ -280,7 +242,7 @@ export default function Dashboard() {
     );
   }
 
-  // --- SHIPPER DASHBOARD ---
+  // SHIPPER DASHBOARD
   const postedLoads = myLoads.filter(l => l.status === 'posted');
   const totalSpent = completedLoads.reduce((s, l) => s + (l.budget || 0), 0);
 
@@ -299,56 +261,28 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Shipper stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <Package className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{postedLoads.length}</p>
-              <p className="text-xs text-muted-foreground">Open Loads</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-              <Truck className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeLoads.length}</p>
-              <p className="text-xs text-muted-foreground">In Transit</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{completedLoads.length}</p>
-              <p className="text-xs text-muted-foreground">Delivered</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-              <DollarSign className="h-5 w-5 text-secondary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">${totalSpent.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Total Spent</p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Open Loads', value: postedLoads.length, icon: Package, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'In Transit', value: activeLoads.length, icon: Truck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+          { label: 'Delivered', value: completedLoads.length, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
+          { label: 'Total Spent', value: `$${totalSpent.toLocaleString()}`, icon: DollarSign, color: 'text-secondary', bg: 'bg-secondary/10' },
+        ].map(stat => (
+          <Card key={stat.label}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`h-11 w-11 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stat.value}</p>
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Active loads */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -365,26 +299,23 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground">No active shipments</p>
                 <Link to="/post-load" className="text-xs text-secondary hover:underline mt-1 inline-block">Post a load →</Link>
               </div>
-            ) : (
-              activeLoads.slice(0, 5).map(load => (
-                <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-sm font-semibold">{load.title}</h4>
-                    <Badge className={`text-xs capitalize shrink-0 ${statusColors[load.status]}`}>{load.status?.replace('_', ' ')}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    <span>{load.pickup_city}, {load.pickup_state}</span>
-                    <ArrowRight className="h-3 w-3 shrink-0" />
-                    <span>{load.delivery_city}, {load.delivery_state}</span>
-                  </div>
-                </Link>
-              ))
-            )}
+            ) : activeLoads.slice(0, 5).map(load => (
+              <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="text-sm font-semibold">{load.title}</h4>
+                  <Badge className={`text-xs capitalize shrink-0 ${statusColors[load.status]}`}>{load.status?.replace('_', ' ')}</Badge>
+                </div>
+                <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  <span>{load.pickup_city}, {load.pickup_state}</span>
+                  <ArrowRight className="h-3 w-3 shrink-0" />
+                  <span>{load.delivery_city}, {load.delivery_state}</span>
+                </div>
+              </Link>
+            ))}
           </CardContent>
         </Card>
 
-        {/* Recent loads */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -395,7 +326,9 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
-            {myLoads.slice(0, 5).map(load => (
+            {myLoads.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No loads posted yet</p>
+            ) : myLoads.slice(0, 5).map(load => (
               <Link key={load.id} to={`/load/${load.id}`} className="block p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <h4 className="text-sm font-semibold">{load.title}</h4>
@@ -408,9 +341,6 @@ export default function Dashboard() {
                 </div>
               </Link>
             ))}
-            {myLoads.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">No loads posted yet</p>
-            )}
           </CardContent>
         </Card>
       </div>

@@ -1,5 +1,6 @@
+import { Load, LoadBid, DriverProfile, ShipperProfile } from '@/api/db';
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,12 +27,12 @@ export default function ShipmentReport() {
   const { data: loads = [], isLoading } = useQuery({
     queryKey: ['report-loads', user?.id],
     queryFn: () => isDriver
-      ? base44.entities.Load.filter({ assigned_driver_user_id: user.id }, '-created_date', 200)
-      : base44.entities.Load.filter({ shipper_user_id: user.id }, '-created_date', 200),
+      ? Load.filter({ assigned_driver_user_id: user.id }, '-created_at', 200)
+      : Load.filter({ shipper_user_id: user.id }, '-created_at', 200),
   });
 
   const cutoff = subMonths(new Date(), parseInt(timeRange));
-  const filtered = loads.filter(l => l.created_date && isAfter(parseISO(l.created_date), cutoff));
+  const filtered = loads.filter(l => l.created_at && isAfter(parseISO(l.created_at), cutoff));
 
   // Stats
   const totalRevenue = filtered.filter(l => l.status === 'delivered').reduce((s, l) => s + (l.budget || 0), 0);

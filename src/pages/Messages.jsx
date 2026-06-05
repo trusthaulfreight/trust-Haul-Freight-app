@@ -1,5 +1,6 @@
+import { Message } from '@/api/db';
 import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,9 +28,9 @@ export default function Messages() {
   const { data: allMessages = [] } = useQuery({
     queryKey: ['all-messages', user.id],
     queryFn: async () => {
-      const sent = await base44.entities.Message.filter({ sender_id: user.id }, '-created_date', 100);
-      const received = await base44.entities.Message.filter({ receiver_id: user.id }, '-created_date', 100);
-      return [...sent, ...received].sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+      const sent = await Message.filter({ sender_id: user.id }, '-created_at', 100);
+      const received = await Message.filter({ receiver_id: user.id }, '-created_at', 100);
+      return [...sent, ...received].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     },
     refetchInterval: 5000,
   });
@@ -43,7 +44,7 @@ export default function Messages() {
       conversations[convoId] = { id: convoId, otherUserId: otherId, messages: [], lastMessage: null };
     }
     conversations[convoId].messages.push(msg);
-    if (!conversations[convoId].lastMessage || new Date(msg.created_date) > new Date(conversations[convoId].lastMessage.created_date)) {
+    if (!conversations[convoId].lastMessage || new Date(msg.created_at) > new Date(conversations[convoId].lastMessage.created_at)) {
       conversations[convoId].lastMessage = msg;
     }
   });
@@ -57,7 +58,7 @@ export default function Messages() {
   const convoList = Object.values(conversations).sort((a, b) => {
     if (!a.lastMessage) return 1;
     if (!b.lastMessage) return -1;
-    return new Date(b.lastMessage.created_date) - new Date(a.lastMessage.created_date);
+    return new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at);
   });
 
   const currentConvo = selectedConvo ? conversations[selectedConvo] : null;
@@ -65,7 +66,7 @@ export default function Messages() {
   const sendMessage = useMutation({
     mutationFn: async () => {
       if (!newMessage.trim() || !selectedUser) return;
-      await base44.entities.Message.create({
+      await Message.create({
         conversation_id: selectedConvo,
         sender_id: user.id,
         receiver_id: selectedUser,
@@ -120,7 +121,7 @@ export default function Messages() {
                   </div>
                   {convo.lastMessage && (
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(convo.lastMessage.created_date), 'MMM d')}
+                      {format(new Date(convo.lastMessage.created_at), 'MMM d')}
                     </span>
                   )}
                 </div>
@@ -151,7 +152,7 @@ export default function Messages() {
                     )}>
                       <p className="text-sm">{msg.content}</p>
                       <p className={cn("text-xs mt-1", msg.sender_id === user.id ? "text-white/60" : "text-muted-foreground")}>
-                        {format(new Date(msg.created_date), 'h:mm a')}
+                        {format(new Date(msg.created_at), 'h:mm a')}
                       </p>
                     </div>
                   </div>

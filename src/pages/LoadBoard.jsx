@@ -1,5 +1,6 @@
+import { Load, LoadBid, DriverProfile, ShipperProfile } from '@/api/db';
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PullToRefresh from '@/components/PullToRefresh';
 import { Link } from 'react-router-dom';
@@ -22,7 +23,7 @@ export default function LoadBoard() {
 
   const { data: loads = [], isLoading } = useQuery({
     queryKey: ['loads-board'],
-    queryFn: () => base44.entities.Load.filter({ status: 'posted' }, '-created_date', 50),
+    queryFn: () => Load.filter({ status: 'posted' }, '-created_at', 50),
   });
 
   const filtered = loads
@@ -46,7 +47,7 @@ export default function LoadBoard() {
         return bpm - apm;
       }
       if (sortBy === 'urgent') return (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0);
-      return new Date(b.created_date) - new Date(a.created_date); // newest
+      return new Date(b.created_at) - new Date(a.created_at); // newest
     });
 
   const handleRefresh = async () => {

@@ -1,8 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, Mail, Phone, MapPin } from 'lucide-react';
-
-const LOGO_URL = "https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/a4a1a4c9e_generated_image.png";
+import { Truck, Mail } from 'lucide-react';
 
 export default function FooterSection() {
   return (
@@ -10,7 +8,16 @@ export default function FooterSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
-            <img src={LOGO_URL} alt="TrustHaul Freight" className="h-10 mb-4" />
+            {/* Clean TrustHaul logo — no Base44 image */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl bg-secondary/20 flex items-center justify-center">
+                <Truck className="h-7 w-7 text-secondary" />
+              </div>
+              <div>
+                <p className="text-xl font-bold font-heading">TrustHaul</p>
+                <p className="text-xs text-white/50">Freight Made Simple</p>
+              </div>
+            </div>
             <p className="text-white/60 text-sm leading-relaxed max-w-md">
               TrustHaul Freight LLC connects verified drivers with shippers through a simple subscription-based platform. 
               No dispatchers, no hidden fees — just reliable freight connections.

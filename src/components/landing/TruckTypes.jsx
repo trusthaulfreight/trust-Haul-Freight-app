@@ -2,12 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const trucks = [
-  { name: 'Flatbed', image: 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=400&q=80', desc: 'Open deck for oversized loads' },
-  { name: 'Dry Van', image: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=400&q=80', desc: 'Enclosed trailer for general freight' },
-  { name: 'Reefer', image: 'https://images.unsplash.com/photo-1570169043859-fb082e4c8e1e?w=400&q=80', desc: 'Temperature-controlled shipping' },
-  { name: 'Box Truck', image: 'https://images.unsplash.com/photo-1617396900799-f4ec2b43c7ae?w=400&q=80', desc: 'Local & last-mile delivery' },
-  { name: 'Hotshot', image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0afa?w=400&q=80', desc: 'Expedited small loads' },
-  { name: 'Tanker', image: 'https://images.unsplash.com/photo-1565793980810-81205e0b4188?w=400&q=80', desc: 'Liquid & bulk transport' },
+  { name: 'Flatbed', image: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80', desc: 'Open deck for oversized loads' },
+  { name: 'Dry Van', image: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=600&q=80', desc: 'Enclosed trailer for general freight' },
+  { name: 'Reefer', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', desc: 'Temperature-controlled shipping' },
+  { name: 'Box Truck', image: 'https://images.unsplash.com/photo-1617396900799-f4ec2b43c7ae?w=600&q=80', desc: 'Local & last-mile delivery' },
+  { name: 'Hotshot', image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&q=80', desc: 'Expedited small loads' },
+  { name: 'Tanker', image: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=600&q=80', desc: 'Liquid & bulk transport' },
 ];
 
 export default function TruckTypes() {
@@ -36,6 +36,7 @@ export default function TruckTypes() {
                 src={truck.image}
                 alt={truck.name}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5">
