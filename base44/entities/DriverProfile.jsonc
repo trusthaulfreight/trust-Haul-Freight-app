@@ -129,7 +129,13 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "driver"
+        "role": {
+          "$in": [
+            "user",
+            "driver",
+            "admin"
+          ]
+        }
       }
     },
     "read": {
