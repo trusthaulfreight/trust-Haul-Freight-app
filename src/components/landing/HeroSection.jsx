@@ -13,6 +13,14 @@ export default function HeroSection() {
         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1920&q=80')" }}
       />
       <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/95 to-primary/70" />
+      {/* Large watermark logo */}
+      <div className="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none">
+        <img
+          src="https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/dc3e653ae_logo.png"
+          alt=""
+          className="w-[480px] h-auto opacity-10 select-none"
+        />
+      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">

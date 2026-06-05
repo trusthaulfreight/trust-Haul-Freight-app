@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const LOGO_URL = "https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/a4a1a4c9e_generated_image.png";
+const LOGO_URL = "https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/dc3e653ae_logo.png";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -41,7 +41,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to={isAuth ? '/dashboard' : '/'} className="flex items-center gap-2">
-            <img src={LOGO_URL} alt="TrustHaul Freight" className="h-10 w-auto" />
+            <img src={LOGO_URL} alt="TrustHaul Freight" className="h-14 w-auto" />
           </Link>
 
           {/* Desktop Nav */}

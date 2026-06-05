@@ -1,13 +1,13 @@
 import React from "react";
 
+const LOGO_URL = "https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/dc3e653ae_logo.png";
+
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
-            <Icon className="w-7 h-7 text-primary-foreground" aria-hidden="true" />
-          </div>
+          <img src={LOGO_URL} alt="TrustHaul Freight" className="h-24 w-auto mx-auto mb-4" />
           <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
           {subtitle && <p className="text-muted-foreground mt-2">{subtitle}</p>}
         </div>
