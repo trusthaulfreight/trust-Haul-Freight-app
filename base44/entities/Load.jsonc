@@ -142,5 +142,98 @@
     "pickup_state",
     "delivery_city",
     "delivery_state"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.shipper_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "account_type": "shipper"
+              }
+            },
+            {
+              "data.shipper_user_id": "{{user.id}}"
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "account_type": "driver"
+              }
+            },
+            {
+              "$or": [
+                {
+                  "data.status": "posted"
+                },
+                {
+                  "data.assigned_driver_user_id": "{{user.id}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.shipper_user_id": "{{user.id}}"
+        },
+        {
+          "$and": [
+            {
+              "data.assigned_driver_user_id": "{{user.id}}"
+            },
+            {
+              "data.status": {
+                "$in": [
+                  "assigned",
+                  "in_transit"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.shipper_user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
 }
