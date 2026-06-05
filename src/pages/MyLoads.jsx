@@ -7,8 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, DollarSign, ArrowRight, Package, Download } from 'lucide-react';
-import { format } from 'date-fns';
+import { MapPin, Calendar, DollarSign, ArrowRight, Package, Download, FileText } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 const statusColors = {
   posted: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -98,6 +98,71 @@ export default function MyLoads() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPDF = async () => {
+    if (loads.length === 0) return alert('No loads to export.');
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(27, 47, 90);
+    doc.text('TrustHaul Freight', 20, 20);
+    doc.setFontSize(14);
+    doc.text('Load History & Payment Records', 20, 30);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${format(new Date(), 'MMM d, yyyy')}`, 20, 38);
+    doc.text(`Shipper: ${user?.full_name || user?.email}`, 20, 45);
+
+    // Stats
+    const totalSpent = loads.reduce((s, l) => s + (l.budget || 0), 0);
+    const delivered = loads.filter(l => l.status === 'delivered').length;
+    const active = loads.filter(l => ['posted', 'assigned', 'in_transit'].includes(l.status)).length;
+
+    doc.setFontSize(12);
+    doc.setTextColor(27, 47, 90);
+    doc.text('Summary', 20, 60);
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    doc.text(`Total Loads: ${loads.length}`, 20, 70);
+    doc.text(`Active Loads: ${active}`, 20, 78);
+    doc.text(`Delivered: ${delivered}`, 20, 86);
+    doc.text(`Total Spent: $${totalSpent.toLocaleString()}`, 20, 94);
+
+    // Table
+    doc.setFontSize(12);
+    doc.setTextColor(27, 47, 90);
+    doc.text('Load Details', 20, 110);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    const headers = ['Title', 'Route', 'Status', 'Budget', 'Pickup Date'];
+    const colWidths = [50, 65, 25, 25, 25];
+    let x = 20;
+    headers.forEach((h, i) => { doc.text(h, x, 120); x += colWidths[i]; });
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 122, 190, 122);
+
+    doc.setTextColor(50, 50, 50);
+    let y = 130;
+    loads.slice(0, 40).forEach(load => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      const route = `${load.pickup_city}, ${load.pickup_state} → ${load.delivery_city}, ${load.delivery_state}`;
+      const truncTitle = load.title?.length > 28 ? load.title.slice(0, 28) + '…' : (load.title || '');
+      const truncRoute = route.length > 38 ? route.slice(0, 38) + '…' : route;
+      doc.text(truncTitle, 20, y);
+      doc.text(truncRoute, 70, y);
+      doc.text(load.status?.replace('_', ' ') || '', 135, y);
+      doc.text(load.budget ? `$${load.budget.toLocaleString()}` : '—', 160, y);
+      doc.text(load.pickup_date ? format(parseISO(load.pickup_date), 'MMM d, yy') : '—', 185, y);
+      y += 8;
+    });
+
+    doc.text(`Page 1 of ${Math.ceil(loads.length / 40)}`, 20, 285);
+    doc.save(`trusthaul-load-history-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   if (isLoading) return (
     <div className="flex justify-center py-20">
       <div className="w-8 h-8 border-4 border-muted border-t-secondary rounded-full animate-spin" />
@@ -109,9 +174,14 @@ export default function MyLoads() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold font-heading">My Loads</h1>
         {!isDriver && (
-          <Button variant="outline" size="sm" onClick={downloadCSV} className="gap-2">
-            <Download className="h-4 w-4" /> Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={downloadCSV} className="gap-2">
+              <Download className="h-4 w-4" /> CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadPDF} className="gap-2">
+              <FileText className="h-4 w-4" /> PDF
+            </Button>
+          </div>
         )}
       </div>
 
