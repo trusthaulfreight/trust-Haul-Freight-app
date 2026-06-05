@@ -35,7 +35,7 @@ export default function Register() {
         password,
         options: {
           data: { full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `https://trusthaulfreight.com/`,
         },
       });
       if (authError) throw authError;
@@ -50,7 +50,9 @@ export default function Register() {
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
+      options: {
+        redirectTo: `https://trusthaulfreight.com/`,
+      },
     });
   };
 

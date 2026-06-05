@@ -32,7 +32,9 @@ export default function Login() {
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
+      options: {
+        redirectTo: `https://trusthaulfreight.com/`,
+      },
     });
   };
 
