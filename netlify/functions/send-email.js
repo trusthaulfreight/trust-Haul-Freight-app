@@ -1,4 +1,4 @@
-﻿import crypto from "node:crypto";
+﻿import crypto from "crypto";
 
 const BRAND_ORANGE = "#f97316";
 const BRAND_DARK = "#172033";
@@ -236,6 +236,15 @@ async function sendWithSendGrid({ to, subject, html, text }) {
 }
 
 export async function handler(event) {
+  if (event.httpMethod === "GET") {
+    return json(200, {
+      ok: true,
+      function: "send-email",
+      hasSendGridKey: Boolean(process.env.SENDGRID_API_KEY),
+      hasSupabaseHookSecret: Boolean(process.env.SUPABASE_HOOK_SECRET),
+    });
+  }
+
   if (event.httpMethod !== "POST") {
     return json(405, { error: "Method not allowed" });
   }
@@ -243,6 +252,7 @@ export async function handler(event) {
   const rawBody = getRawBody(event);
 
   try {
+    console.log("Supabase Send Email Hook received request");
     verifySupabaseWebhook(rawBody, event.headers);
 
     const payload = JSON.parse(rawBody);
@@ -255,6 +265,8 @@ export async function handler(event) {
     const actionType = emailData.email_action_type || "signup";
     const confirmationUrl = buildConfirmationUrl(emailData);
 
+    console.log(`Sending ${actionType} email to ${user.email}`);
+
     await sendWithSendGrid({
       to: user.email,
       subject: subjectFor(actionType),
@@ -262,9 +274,12 @@ export async function handler(event) {
       text: emailText({ actionType, confirmationUrl }),
     });
 
+    console.log(`SendGrid accepted ${actionType} email to ${user.email}`);
+
     return json(200, {});
   } catch (error) {
     console.error("Supabase Send Email Hook failed", error);
-    return json(401, { error: error.message });
+    return json(500, { error: error.message });
   }
 }
+
