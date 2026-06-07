@@ -93,7 +93,7 @@ function buildConfirmationUrl(emailData) {
   }
 
   const params = new URLSearchParams({
-    token_hash: emailData.token_hash,
+    token: emailData.token_hash,
     type: actionType,
     redirect_to: redirectTo,
   });
@@ -282,4 +282,5 @@ export async function handler(event) {
     return json(500, { error: error.message });
   }
 }
+
 
