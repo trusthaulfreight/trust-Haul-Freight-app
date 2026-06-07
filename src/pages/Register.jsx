@@ -46,7 +46,6 @@ export default function Register() {
     }
   };
 
-
   if (emailSent) {
     return (
       <AuthLayout
@@ -85,7 +84,6 @@ export default function Register() {
         </>
       }
     >
-
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
@@ -146,7 +144,7 @@ export default function Register() {
               id="confirm"
               type="password"
               autoComplete="new-password"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="Confirm password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10 h-12"

@@ -229,6 +229,7 @@ async function sendWithSendGrid({ to, subject, html, text }) {
       ],
       tracking_settings: {
         click_tracking: { enable: false, enable_text: false },
+        open_tracking: { enable: false },
       },
     }),
   });
@@ -241,12 +242,7 @@ async function sendWithSendGrid({ to, subject, html, text }) {
 
 export async function handler(event) {
   if (event.httpMethod === "GET") {
-    return json(200, {
-      ok: true,
-      function: "send-email",
-      hasSendGridKey: Boolean(process.env.SENDGRID_API_KEY),
-      hasSupabaseHookSecret: Boolean(process.env.SUPABASE_HOOK_SECRET),
-    });
+    return json(200, { ok: true, function: "send-email" });
   }
 
   if (event.httpMethod !== "POST") {
@@ -269,7 +265,7 @@ export async function handler(event) {
     const actionType = emailData.email_action_type || "signup";
     const confirmationUrl = buildConfirmationUrl(emailData);
 
-    console.log(`Sending ${actionType} email to ${user.email}`);
+    console.log(`Sending ${actionType} email`);
 
     await sendWithSendGrid({
       to: user.email,
@@ -278,7 +274,7 @@ export async function handler(event) {
       text: emailText({ actionType, confirmationUrl }),
     });
 
-    console.log(`SendGrid accepted ${actionType} email to ${user.email}`);
+    console.log(`SendGrid accepted ${actionType} email`);
 
     return json(200, {});
   } catch (error) {
@@ -286,6 +282,4 @@ export async function handler(event) {
     return json(500, { error: error.message });
   }
 }
-
-
 

@@ -28,7 +28,6 @@ export default function Login() {
     }
   };
 
-
   return (
     <AuthLayout
       icon={LogIn}
@@ -43,7 +42,6 @@ export default function Login() {
         </>
       }
     >
-
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
@@ -81,7 +79,7 @@ export default function Login() {
               id="password"
               type="password"
               autoComplete="current-password"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 h-12"
