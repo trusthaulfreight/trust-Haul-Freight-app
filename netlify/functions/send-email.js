@@ -84,6 +84,10 @@ function verifySupabaseWebhook(rawBody, headers) {
   }
 }
 
+function verificationTypeFor(actionType) {
+  return actionType === "signup" ? "email" : actionType;
+}
+
 function buildConfirmationUrl(emailData) {
   const actionType = emailData.email_action_type || "signup";
   const redirectTo = emailData.redirect_to || SITE_URL;
@@ -94,7 +98,7 @@ function buildConfirmationUrl(emailData) {
 
   const params = new URLSearchParams({
     token: emailData.token_hash,
-    type: actionType,
+    type: verificationTypeFor(actionType),
     redirect_to: redirectTo,
   });
 
@@ -282,5 +286,6 @@ export async function handler(event) {
     return json(500, { error: error.message });
   }
 }
+
 
 
