@@ -153,3 +153,24 @@ button, a, [role="button"], nav, svg {
     padding: 2rem !important;
   }
 }
+
+/* Force Clerk form controls to use the full TrustHaul auth card width. */
+.cl-main,
+.cl-mainContent,
+.cl-form,
+.cl-formField,
+.cl-formFieldRow,
+.cl-formFieldInputGroup,
+.cl-formFieldInput,
+.cl-formButtonPrimary {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.cl-formFieldRow {
+  display: block !important;
+}
+
+.cl-formFieldInput {
+  box-sizing: border-box !important;
+}
