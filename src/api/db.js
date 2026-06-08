@@ -28,8 +28,14 @@ export const Profiles = {
   async update(userId, fields) {
     const { data, error } = await supabase
       .from('profiles')
-      .update({ ...fields, updated_at: new Date().toISOString() })
-      .eq('id', userId)
+      .upsert(
+        {
+          id: userId,
+          ...fields,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
       .select()
       .single();
     if (error) throw error;
