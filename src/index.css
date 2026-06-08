@@ -125,3 +125,31 @@ button, a, [role="button"], nav, svg {
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+/* Clerk auth pages: use Clerk as the single card, not a card inside a card. */
+.cl-rootBox,
+.cl-cardBox,
+.cl-card {
+  width: 100% !important;
+}
+
+.cl-cardBox {
+  box-shadow: 0 10px 30px hsl(var(--foreground) / 0.08) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 1rem !important;
+  overflow: visible !important;
+}
+
+.cl-card {
+  padding: 1.5rem !important;
+  border-radius: 1rem !important;
+}
+
+.cl-formFieldInput {
+  box-shadow: none !important;
+}
+
+@media (min-width: 640px) {
+  .cl-card {
+    padding: 2rem !important;
+  }
+}

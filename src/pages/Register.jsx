@@ -11,6 +11,7 @@ export default function Register() {
       icon={UserPlus}
       title="Create your account"
       subtitle="Join TrustHaul Freight today"
+      plain
       footer={
         <>
           Already have an account?{" "}

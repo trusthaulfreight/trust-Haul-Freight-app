@@ -2,7 +2,7 @@
 
 const LOGO_URL = "https://media.base44.com/images/public/6a205a947ba9f6044bb35d02/dc3e653ae_logo.png";
 
-export default function AuthLayout({ title, subtitle, footer, children }) {
+export default function AuthLayout({ title, subtitle, footer, children, plain = false }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
@@ -11,9 +11,13 @@ export default function AuthLayout({ title, subtitle, footer, children }) {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
           {subtitle && <p className="text-muted-foreground mt-2">{subtitle}</p>}
         </div>
-        <div className="bg-card rounded-2xl shadow-sm border border-border p-6 sm:p-8">
-          {children}
-        </div>
+        {plain ? (
+          children
+        ) : (
+          <div className="bg-card rounded-2xl shadow-sm border border-border p-6 sm:p-8">
+            {children}
+          </div>
+        )}
         {footer && (
           <p className="text-center text-sm text-muted-foreground mt-6">{footer}</p>
         )}

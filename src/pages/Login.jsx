@@ -11,6 +11,7 @@ export default function Login() {
       icon={LogIn}
       title="Welcome back"
       subtitle="Log in to your TrustHaul account"
+      plain
       footer={
         <>
           Don't have an account?{" "}
