@@ -1,9 +1,9 @@
-export const clerkAppearance = {
+﻿export const clerkAppearance = {
   variables: {
     colorPrimary: "#0b1b3f",
     colorText: "#0f172a",
     colorTextSecondary: "#64748b",
-    colorBackground: "transparent",
+    colorBackground: "#ffffff",
     colorInputBackground: "#ffffff",
     colorInputText: "#0f172a",
     borderRadius: "12px",
@@ -12,15 +12,17 @@ export const clerkAppearance = {
   },
   elements: {
     rootBox: "w-full",
-    card: "w-full shadow-none border-0 p-0 bg-transparent gap-0",
+    card: "w-full shadow-none border-0 p-0 bg-transparent",
     header: "hidden",
     headerTitle: "hidden",
     headerSubtitle: "hidden",
+    main: "p-0",
+    mainContent: "p-0",
     socialButtons: "hidden",
     socialButtonsBlockButton: "hidden",
     dividerRow: "hidden",
-    form: "space-y-4",
-    formFieldRow: "block",
+    form: "space-y-4 p-0",
+    formFieldRow: "grid grid-cols-1 gap-4 sm:grid-cols-2",
     formField: "space-y-2",
     formFieldLabel: "text-sm font-medium text-foreground",
     formFieldLabelRow: "mb-1",
