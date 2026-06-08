@@ -3,19 +3,7 @@ import { Link } from "react-router-dom";
 import { SignUp } from "@clerk/clerk-react";
 import { UserPlus } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-
-const clerkAppearance = {
-  elements: {
-    rootBox: "w-full",
-    card: "w-full shadow-none border-0 p-0 bg-transparent",
-    headerTitle: "hidden",
-    headerSubtitle: "hidden",
-    socialButtonsBlockButton: "hidden",
-    dividerRow: "hidden",
-    footer: "hidden",
-    formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground",
-  },
-};
+import { clerkAppearance } from "@/lib/clerkAppearance";
 
 export default function Register() {
   return (
