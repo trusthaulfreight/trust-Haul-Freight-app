@@ -1,80 +1,66 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '@/api/supabaseClient';
+﻿import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useClerk, useUser } from '@clerk/clerk-react';
 import { Profiles } from '@/api/db';
 
 const AuthContext = createContext();
 
+function getPrimaryEmail(clerkUser) {
+  return clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || '';
+}
+
+function getFullName(clerkUser) {
+  return clerkUser?.fullName || [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ');
+}
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);          // combined auth + profile data
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const { isLoaded, isSignedIn, user: clerkUser } = useUser();
+  const { signOut } = useClerk();
+  const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Merge Supabase auth user with our profiles table
-  const loadFullUser = async (authUser) => {
-    if (!authUser) {
+  const loadFullUser = useCallback(async () => {
+    if (!isLoaded) return;
+
+    if (!isSignedIn || !clerkUser) {
       setUser(null);
-      setIsAuthenticated(false);
+      setAuthChecked(true);
       return;
     }
+
+    const baseUser = {
+      id: clerkUser.id,
+      email: getPrimaryEmail(clerkUser),
+      full_name: getFullName(clerkUser),
+      account_type: null,
+      onboarding_complete: false,
+      profile_id: null,
+    };
+
     try {
-      const profile = await Profiles.me(authUser.id);
+      const profile = await Profiles.me(clerkUser.id);
       setUser({
-        id: authUser.id,
-        email: authUser.email,
-        full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
+        ...baseUser,
+        full_name: profile?.full_name || baseUser.full_name,
         account_type: profile?.account_type || null,
         onboarding_complete: profile?.onboarding_complete || false,
         profile_id: profile?.profile_id || null,
       });
-      setIsAuthenticated(true);
     } catch {
-      // Profile row may not exist yet (first login), use auth data only
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        full_name: authUser.user_metadata?.full_name || '',
-        account_type: null,
-        onboarding_complete: false,
-        profile_id: null,
-      });
-      setIsAuthenticated(true);
+      setUser(baseUser);
+    } finally {
+      setAuthChecked(true);
     }
-  };
+  }, [clerkUser, isLoaded, isSignedIn]);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadFullUser(session?.user ?? null).finally(() => {
-        setIsLoadingAuth(false);
-        setAuthChecked(true);
-      });
-    });
-
-    // Listen for auth changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadFullUser(session?.user ?? null).finally(() => {
-        setIsLoadingAuth(false);
-        setAuthChecked(true);
-      });
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const refreshUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    await loadFullUser(authUser);
-  };
+    loadFullUser();
+  }, [loadFullUser]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirectUrl: '/' });
     setUser(null);
-    setIsAuthenticated(false);
-    window.location.href = '/';
   };
 
-  // Keep navigateToLogin for compatibility with ProtectedRoute
   const navigateToLogin = () => {
     window.location.href = '/login';
   };
@@ -82,16 +68,16 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user,
-      isAuthenticated,
-      isLoadingAuth,
-      isLoadingPublicSettings: false,  // no longer needed, kept for compatibility
+      isAuthenticated: Boolean(isSignedIn),
+      isLoadingAuth: !isLoaded,
+      isLoadingPublicSettings: false,
       authError: null,
       authChecked,
       logout,
       navigateToLogin,
-      refreshUser,
-      checkUserAuth: refreshUser,      // alias for ProtectedRoute compatibility
-      checkAppState: refreshUser,
+      refreshUser: loadFullUser,
+      checkUserAuth: loadFullUser,
+      checkAppState: loadFullUser,
     }}>
       {children}
     </AuthContext.Provider>
