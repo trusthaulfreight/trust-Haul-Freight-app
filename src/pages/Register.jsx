@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 export default function Register() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const navigate = useNavigate();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -26,6 +28,10 @@ export default function Register() {
     if (!isLoaded) return;
 
     setError("");
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Please enter your first and last name.");
+      return;
+    }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -33,7 +39,12 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await signUp.create({ emailAddress: email, password });
+      await signUp.create({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        emailAddress: email,
+        password,
+      });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setPendingVerification(true);
     } catch (err) {
@@ -119,6 +130,33 @@ export default function Register() {
       ) : (
         <form onSubmit={handleCreateAccount} className="space-y-5">
           <div className="space-y-2">
+            <Label htmlFor="firstName">First name</Label>
+            <Input
+              id="firstName"
+              type="text"
+              autoComplete="given-name"
+              autoFocus
+              placeholder="Jane"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="h-12"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last name</Label>
+            <Input
+              id="lastName"
+              type="text"
+              autoComplete="family-name"
+              placeholder="Smith"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="h-12"
+              required
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="email">Email address</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -126,7 +164,6 @@ export default function Register() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                autoFocus
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
